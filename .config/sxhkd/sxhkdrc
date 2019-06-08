@@ -137,7 +137,7 @@ super + alt + {Left,Down,Up,Right}
 
 # change the ratio
 super + alt + {j,k}
-	bash -c /home/nicentra/.scripts/resize\ {-,+}
+	.scripts/resize {-,+}
 
 # preselect the ratio
 super + alt + {1-9}
