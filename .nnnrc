@@ -1,0 +1,5 @@
+#!/bin/env sh
+alias nnn='nnn -di'
+export NNN_BMS='m:/media;d:/home/nicentra/Dropbox;D:/home/nicentra/Downloads;p:/home/nicentra/Dropbox/.private;g:/home/nicentra/git'
+export NNN_USE_EDITOR=1
+export NNN_NO_AUTOSELECT=1
