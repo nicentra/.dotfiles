@@ -33,9 +33,7 @@ function ranger-cd
 end  
 
 # Exports
-set -x PATH $PATH /home/nicentra/.scripts
-set -x PATH $PATH /home/nicentra/.scripts/scrapers
-set -x PATH $PATH /home/nicentra/go/bin
+set -x PATH $PATH /home/nicentra/.scripts /home/nicentra/go/bin /home/nicentra/.local/bin
 set -x TERMINAL st
 set -x EDITOR nvim
 set -x VISUAL nvim
