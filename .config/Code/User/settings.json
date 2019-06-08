@@ -1,0 +1,117 @@
+{
+    "workbench.settings.editor": "json",
+    "workbench.iconTheme": "Monokai Pro Icons",
+    "explorer.confirmDelete": false,
+    "window.zoomLevel": 0,
+    "explorer.confirmDragAndDrop": false,
+    "latex-workshop.view.pdf.viewer": "external",
+    "editor.wordWrap": "on",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "prettier.singleQuote": true,
+    "prettier.tabWidth": 4,
+    "prettier.arrowParens": "always",
+    "prettier.jsxBracketSameLine": true,
+    "prettier.jsxSingleQuote": true,
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    "prettier.eslintIntegration": true,
+    "prettier.tslintIntegration": true,
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "eslint.nodePath": "/usr/bin/eslint/",
+    "markdownlint.config": {
+        "MD013": false,
+        "MD030": false,
+        "MD007": false
+    },
+    "git.confirmSync": false,
+    "latex-workshop.message.update.show": false,
+    "explorer.sortOrder": "type",
+    "latex-workshop.view.pdf.external.command": {
+        "command": "zathura",
+        "args": ["%PDF%"]
+    },
+    "latex-workshop.latex.autoBuild.run": "never",
+    "editor.fontFamily": "'Fira Mono', 'monospace', monospace, 'Droid Sans Fallback'",
+    "workbench.colorTheme": "Base16 Gruvbox dark, hard",
+    "editor.tokenColorCustomizations": {
+        "[Gruvbox Dark Hard]": {
+            "textMateRules": [
+                {
+                    "scope": [
+                        "text.tex.latex keyword.control",
+                        "text.tex.latex support.function",
+                        "text.tex.latex constant.character.math.tex",
+                        "text.tex.latex punctuation.definition.constant.math.tex",
+                        "text.tex.latex punctuation.definition.function.tex"
+                    ],
+                    "settings": {
+                        "foreground": "#fb4934"
+                    }
+                },
+                {
+                    "scope": [
+                        "text.tex.latex support.function.section.latex",
+                        "text.tex.latex variable.parameter.function.latex",
+                        "text.tex.latex support.function.section.latex",
+                        "text.tex.latex punctuation.definition.function.latex"
+                    ],
+                    "settings": {
+                        "foreground": "#fabd2f"
+                    }
+                },
+                {
+                    "scope": ["text.tex.latex entity.name.section.latex"],
+                    "settings": {
+                        "foreground": "#ebdbb2"
+                    }
+                },
+                {
+                    "scope": [
+                        "text.tex.latex support.class.latex",
+                        "text.tex.latex constant.other.reference.citation",
+                        "text.tex.latex variable.parameter.definition.label.latex",
+                        "text.tex.latex variable.parameter.definition.label.latex"
+                    ],
+                    "settings": {
+                        "foreground": "#8ec07c"
+                    }
+                },
+                {
+                    "scope": [
+                        "text.tex.latex punctuation",
+                        "text.tex.latex punctuation.definition",
+                        "text.tex.latex punctuation.definition.brackets.tex",
+                        "text.tex.latex meta.function.environment.general.latex"
+                    ],
+                    "settings": {
+                        "foreground": "#d65d0e"
+                    }
+                },
+                {
+                    "scope": [
+                        "text.tex.latex meta.function.environment.general.latex"
+                    ],
+                    "settings": {
+                        "foreground": "#fe8019"
+                    }
+                }
+            ]
+        }
+    },
+    "editor.wrappingIndent": "indent",
+    "java.configuration.checkProjectSettingsExclusions": false,
+    "editor.suggestSelection": "first",
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue"
+}

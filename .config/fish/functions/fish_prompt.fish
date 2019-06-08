@@ -1,0 +1,1 @@
+/home/nicentra/.local/share/omf/themes/nlambda/fish_prompt.fish

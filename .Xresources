@@ -1,0 +1,17 @@
+!Xft.dpi: 192 
+Xcursor.theme: xcursor-breeze-neutral
+Xcursor.size: 20
+
+!#include ".Xresources.d/base16-monokai-256.Xresources"
+
+!Terminal specific options
+st.font:		 Fira Mono:pixelsize=13:antialias:true:autohint=true
+
+!URxvt specific options
+URxvt.font:		 xft:Fira Mono:pixelsize=14:antialias:true:autohint=true, xft:M+ 1mn:pixelsize=12, xft:Symbola:size=11
+URxvt.scrollBar: false
+URxvt.depth:     32
+
+!st specific options
+st.alpha:		0.93
+st.shell:		/bin/zsh

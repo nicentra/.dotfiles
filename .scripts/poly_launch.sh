@@ -1,0 +1,1 @@
+/home/nicentra/.config/polybar/launch.sh

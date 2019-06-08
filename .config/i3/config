@@ -1,0 +1,274 @@
+#/* vim:ft=i3config
+
+# Terminal Emulator
+set $term kitty
+
+# Mod Key
+set $mod Mod4
+
+### KB and Monitor Layout
+exec setxkbmap -layout us,us -variant ,intl -option grp:alt_shift_toggle
+exec xrandr --output HDMI-1 --primary
+exec xset s 0 0
+
+# Font
+font pango:Roboto Mono for Powerline 11
+
+### Colors
+set $base00 #181818
+set $base01 #282828
+set $base02 #383838
+set $base03 #585858
+set $base04 #b8b8b8
+set $base05 #d8d8d8
+set $base06 #e8e8e8
+set $base07 #f8f8f8
+set $base08 #ab4642
+set $base09 #dc9656
+set $base0A #f7ca88
+set $base0B #a1b56c
+set $base0C #86c1b9
+set $base0D #7cafc2
+set $base0E #ba8baf
+set $base0F #a16946
+
+# Basic color configuration using the Base16 variables for windows and borders.
+# Property Name         Border  BG      Text    Indicator Child Border
+client.focused          $base05 $base0D $base00 $base0D $base0D
+client.focused_inactive $base01 $base01 $base05 $base03 $base01
+client.unfocused        $base01 $base00 $base05 $base01 $base01
+client.urgent           $base08 $base08 $base00 $base08 $base08
+client.placeholder      $base00 $base00 $base05 $base00 $base00
+client.background		$base07
+
+### Auto-start applications
+exec --no-startup-id polybar -r primary
+exec --no-startup-id polybar -r secondary
+exec --no-startup-id discord
+#exec --no-startup-id spotify
+exec --no-startup-id thunderbird
+exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+exec --no-startup-id feh --bg-scale ~/Dropbox/Wallpapers/bg.jpg
+exec --no-startup-id compton --config ~/.compton.conf
+exec --no-startup-id dunst
+exec --no-startup-id nm-applet
+exec --no-startup-id pamac-system-daemon
+exec --no-startup-id redshift-gtk
+exec --no-startup-id blueman-applet
+exec --no-startup-id dropbox-cli start
+
+gaps inner 10
+gaps outer 10
+
+for_window [class="^.*"] border pixel 0 
+
+### Media Player Keybinds
+## Audio Controls
+bindsym XF86AudioRaiseVolume	exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume	exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute			exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
+## Prev/Pause/Next
+bindsym XF86AudioPrev			exec playerctl previous
+bindsym XF86AudioPlay			exec playerctl play-pause
+bindsym XF86AudioNext			exec playerctl next
+
+### Application keybinds
+bindsym $mod+Return exec $term
+bindsym $mod+m exec --no-startup-id rofi -show drun
+bindsym $mod+Shift+q kill
+
+bindsym $mod+Shift+m exec pavucontrol
+bindsym $mod+Shift+f exec $term -e ranger
+bindsym $mod+Shift+w exec firefox-developer-edition; workspace $ws2
+bindsym $mod+Shift+v exec code; workspace $ws3
+bindsym $mod+Shift+z exec zathura
+
+bindsym Print exec --no-startup-id flameshot screen -c
+bindsym Shift+Print exec --no-startup-id flameshot gui
+bindsym Ctrl+Print exec --no-startup-id flameshot full -c
+
+### Tilling/Stacking/Focus Keybinds
+floating_modifier $mod
+
+bindsym $mod+j focus left
+bindsym $mod+k focus down
+bindsym $mod+l focus up
+bindsym $mod+semicolon focus right
+
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+bindsym $mod+Shift+j move left
+bindsym $mod+Shift+k move down
+bindsym $mod+Shift+l move up
+bindsym $mod+Shift+semicolon move right
+
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+bindsym $mod+h split h
+bindsym $mod+v split v
+bindsym $mod+f fullscreen toggle
+
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space focus mode_toggle
+bindsym $mod+a focus parent
+bindsym $mod+p sticky enable
+bindsym $mod+Shift+p sticky disable
+
+### Everything Workspaces
+## Workspace names
+
+# set $ws1 "1: "
+# set $ws2 "2: "
+# set $ws3 "3: "
+# set $ws4 "4: "
+# set $ws5 "5: "
+# set $ws6 "6: "
+# set $ws7 "7: "
+# set $ws8 "8: "
+# set $ws9 "9: "
+# set $ws10 "10: "
+# set $ws11 "11: "
+# set $ws12 "12: "
+# 〇 一 二 三 四 五 六 七 八 九 十 十一
+set $ws1 "1: 一"
+set $ws2 "2: 二"
+set $ws3 "3: 三"
+set $ws4 "4: 四"
+set $ws5 "5: 五"
+set $ws6 "6: 六"
+set $ws7 "7: 七"
+set $ws8 "8: 八"
+set $ws9 "9: 九"
+set $ws10 "10: 〇"
+set $ws11 "11: 十"
+set $ws12 "12: 十一"
+
+## Workspace to Display Assignment
+workspace $ws1 output HDMI-1
+workspace $ws2 output HDMI-1
+workspace $ws3 output HDMI-1
+workspace $ws4 output HDMI-1
+workspace $ws5 output HDMI-1
+workspace $ws6 output HDMI-1
+workspace $ws7 output HDMI-1
+workspace $ws8 output HDMI-1
+workspace $ws9 output HDMI-1
+workspace $ws10 output HDMI-0
+workspace $ws11 output HDMI-1
+workspace $ws12 output HDMI-1
+
+## Workspace Keybinds
+# Go to Workspace
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+7 workspace $ws7
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9
+bindsym $mod+0 workspace $ws10
+bindsym $mod+minus workspace $ws11
+bindsym $mod+equal workspace $ws12
+
+# Go to next/previous Workspace
+bindsym $mod+Ctrl+Left workspace prev
+bindsym $mod+Ctrl+L workspace prev
+bindsym $mod+Ctrl+Right workspace next
+bindsym $mod+Ctrl+semicolon workspace next
+
+# Move container to next/previous Workspace; Go to next/previous Workspace
+bindsym $mod+Mod1+Left move container to workspace prev; workspace prev
+bindsym $mod+Mod1+L move container to workspace prev; workspace prev
+bindsym $mod+Mod1+Right move container to workspace next; workspace next
+bindsym $mod+Mod1+semicolon move container to workspace next; workspace next
+
+# Move container to Workspace
+bindsym $mod+Shift+1 move container to workspace $ws1
+bindsym $mod+Shift+2 move container to workspace $ws2
+bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+6 move container to workspace $ws6
+bindsym $mod+Shift+7 move container to workspace $ws7
+bindsym $mod+Shift+8 move container to workspace $ws8
+bindsym $mod+Shift+9 move container to workspace $ws9
+bindsym $mod+Shift+0 move container to workspace $ws10
+bindsym $mod+Shift+minus move container to workspace $ws11
+bindsym $mod+Shift+equal move container to workspace $ws12
+
+# Move container to Workspace; Go to Workspace
+bindsym $mod+Ctrl+1 move container to workspace $ws1; workspace $ws1
+bindsym $mod+Ctrl+2 move container to workspace $ws2; workspace $ws2
+bindsym $mod+Ctrl+3 move container to workspace $ws3; workspace $ws3
+bindsym $mod+Ctrl+4 move container to workspace $ws4; workspace $ws4
+bindsym $mod+Ctrl+5 move container to workspace $ws5; workspace $ws5
+bindsym $mod+Ctrl+6 move container to workspace $ws6; workspace $ws6
+bindsym $mod+Ctrl+7 move container to workspace $ws7; workspace $ws7
+bindsym $mod+Ctrl+8 move container to workspace $ws8; workspace $ws8
+bindsym $mod+Ctrl+9 move container to workspace $ws9; workspace $ws9
+bindsym $mod+Ctrl+0 move container to workspace $ws10; workspace $ws10
+bindsym $mod+Ctrl+minus move container to workspace $ws11; workspace $ws11
+bindsym $mod+Ctrl+equal move container to workspace $ws12; workspace $ws12
+
+## Auto-assign containers to Workspaces
+assign [class="^Firefox"] $ws2
+assign [class="code-oss"] $ws3
+assign [class="webstorm"] $ws3
+assign [title="^ranger"] $ws4
+assign [class="Steam"] $ws8 
+assign [class="Lutris"] $ws8 
+for_window [class="Spotify"] move to workspace $ws9 
+#for_window [title="[tT]witch - Firefox"] move to workspace $ws10
+#for_window [title="YouTube - Firefox"] move to workspace $ws10
+assign [class="discord"] $ws11
+assign [class="Thunderbird"] $ws12
+
+for_window [class="Pavucontrol"] floating enable
+
+#assign [title="^ranger"] $ws6
+
+# misc keybinds
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec --no-startup-id /home/nicentra/.scripts/powermenu "$(echo -e "\n\n" | rofi -dmenu -config ~/.config/rofi/powermenu.rasi)" 
+
+mode "resize" {
+        bindsym j resize shrink width 10 px or 10 ppt
+        bindsym k resize grow height 10 px or 10 ppt
+        bindsym l resize shrink height 10 px or 10 ppt
+        bindsym semicolon resize grow width 10 px or 10 ppt
+
+        bindsym Left  resize shrink width  2px or 2ppt
+        bindsym Down  resize grow   height 2px or 2ppt
+        bindsym Up    resize shrink height 2px or 2ppt
+        bindsym Right resize grow   width  2px or 2ppt
+
+
+        bindsym Return mode "default";
+        bindsym Escape mode "default";
+}
+bindsym $mod+r mode "resize";
+
+mode "gaps" {
+
+        bindsym Up   gaps inner all plus 2 
+        bindsym Down gaps inner all minus 2
+        bindsym 0    gaps inner all set 0
+
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+
+}
+bindsym $mod+g mode "gaps"

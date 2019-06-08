@@ -1,0 +1,76 @@
+!colors
+!Black, Gray, Silver, White
+#define base00 #181818
+#define base08 #585858
+#define base07 #d8d8d8
+#define base09 #f8f8f8
+
+!Red
+#define base01 #ab4642
+
+!Green
+#define base02 #a1b56c
+
+!Yellow
+#define base03 #f7ca88
+
+!Blue
+#define base04 #7cafc2
+
+!Purple
+#define base05 #ba8baf
+
+!Teal
+#define base06 #86c1b9
+
+!Extra Colors
+#define base0A #dc9656
+#define base0B #a16946
+#define base0C #282828
+#define base0D #383838
+#define base0E #b8b8b8
+#define base0F #e8e8e8
+
+!Terminal specific options
+*.foreground:   base07
+*.background:   base00
+*.cursorColor:  base0A
+
+!Black, Gray, Silver, White
+*.color0:       base00
+*.color8:       base08
+*.color7:       base07
+*.color15:      base09
+
+!Red
+*.color1:       base01
+*.color9:       base01
+
+!Green
+*.color2:       base02
+*.color10:      base02
+
+!Yellow
+*.color3:       base03
+*.color11:      base03
+
+!Blue
+*.color4:       base04
+*.color12:      base04
+
+!Purple
+*.color5:       base05
+*.color13:      base05
+
+!Teal
+*.color6:       base06
+*.color14:      base06
+
+! Note: colors beyond 15 might not be loaded (e.g., xterm, urxvt),
+! use 'shell' template to set these if necessary
+*.color16:      base0A
+*.color17:      base0B
+*.color18:      base0C
+*.color19:      base0D
+*.color20:      base0E
+*.color21:      base0F

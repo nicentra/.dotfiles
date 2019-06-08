@@ -1,0 +1,77 @@
+# Lines configured by zsh-newuser-install
+HISTFILE=~/.histfile
+HISTSIZE=100000
+SAVEHIST=100000
+setopt autocd extendedglob
+# End of lines configured by zsh-newuser-install
+# The following lines were added by compinstall
+zstyle :compinstall filename '/home/nicentra/.zshrc'
+
+autoload -Uz compinit
+compinit
+
+function ranger-cd {
+tempfile="$(mktemp -t tmp.XXXXXX)"
+    ranger --choosedir="$tempfile" "${@:-$(pwd)}"
+    test -f "$tempfile" &&
+    if [ "$(cat -- "$tempfile")" != "$(echo -n `pwd`)" ]; then
+        cd -- "$(cat "$tempfile")"
+    fi
+    rm -f -- "$tempfile"
+}
+
+# This binds Ctrl-O to ranger-cd:
+#bind '"\C-o":"ranger-cd\C-m"'     
+
+# Plugins
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source /home/nicentra/.nnnrc
+
+# Base16 Shell
+export BASE16_SHELL_SET_BACKGROUND=false
+export BASE16_SHELL="$HOME/.config/base16-shell/"
+if [ "$TERM" != "!st-256color" ]; then
+    [ -n "$PS1" ] && \
+		[ -s "$BASE16_SHELL/profile_helper.sh" ] && \
+			eval "$("$BASE16_SHELL/profile_helper.sh")"
+fi
+
+# Rebinds
+bindkey '^[[3~' delete-char
+
+# Exports
+export PATH=$PATH:/home/nicentra/.scripts:/home/nicentra/.scripts/scrapers:/home/nicentra/go/bin
+export TERMINAL=st
+export EDITOR=nvim
+export VISUAL=nvim
+
+# Aliases
+alias xrc='$EDITOR ~/.Xresources'
+alias zshrc='$EDITOR /home/nicentra/.zshrc.pre-oh-my-zsh && source /home/nicentra/.zshrc.pre-oh-my-zsh'
+alias nnnrc='$EDITOR /home/nicentra/.nnnrc && source /home/nicentra/.zshrc.pre-oh-my-zsh'
+alias vimrc='$EDITOR /home/nicentra/.vimrc'
+alias xinitrc='$EDITOR /home/nicentra/.xinitrc'
+alias rrc='$EDITOR /home/nicentra/.config/ranger/rc.conf'
+alias krc='$EDITOR ~/.config/kitty/kitty.conf'
+alias strc='$EDITOR ~/git/luke_st/config.h'
+alias ldmrc='sudo $EDITOR /etc/lightdm/lightdm.conf'
+alias vim='$EDITOR'
+alias v='$EDITOR'
+alias e='$EDITOR'
+alias l='ls -lah --color=auto'
+alias c='clear'
+alias q='exit'
+alias pacman='sudo pacman'
+alias i3='$EDITOR /home/nicentra/.config/i3/config && i3-msg reload'
+alias bspwmrc='$EDITOR /home/nicentra/.config/bspwm/bspwmrc'
+alias sxhkdrc='$EDITOR /home/nicentra/.config/sxhkd/sxhkdrc'
+alias polyconfig='cd /home/nicentra/.config/polybar/ && ranger'
+alias lsblk='lsblk --output name,fstype,label,size,mountpoint,uuid'
+alias dcli='dropbox-cli'
+alias d='docker'
+alias dc='docker-compose'
+alias wget='wget -q --show-progress'
+alias r='ranger-cd'
+alias comp='killall compton; compton & disown'

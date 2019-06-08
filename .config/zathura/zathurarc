@@ -1,0 +1,17 @@
+# Options
+set adjust-open best-fit
+set smooth-scroll true
+set guioptions sv
+
+# Keybinds
+map J scroll down
+map K scroll up
+map j scroll full-down
+map k scroll full-up
+map <Right> scroll full-down
+map <Left> scroll full-up
+
+#set pages-per-row 2
+#set first-page-column 1:1
+#set recolor true
+#set recolor-keephue true
