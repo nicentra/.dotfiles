@@ -9,8 +9,8 @@ super + Return
 
 # programs
 super + shift + w
-	firefox-developer-edition;\
-	bspc desktop -f '^2'
+	bspc desktop -f '^2';\
+	firefox
 super + shift + v
 	bspc desktop -f '^3';\
 	code

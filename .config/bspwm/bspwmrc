@@ -5,7 +5,8 @@ killall sxhkd
 setxkbmap -layout us,us -variant ,intl -option
 xrandr --output HDMI-1 --primary --auto --output HDMI-0 --auto --right-of HDMI-1
 #xrandr --output HDMI-1 --primary --auto --pos 0x540 --output HDMI-0 --auto --pos 1920x0
-xset s 0 0
+xset dpms 0 0 0
+xset -dpms
 numlockx on
 
 bspc monitor HDMI-1 -d 一 二 三 四 五 六 七 八 九 十 十一
@@ -28,7 +29,8 @@ bspc config presel_feedback_color "#8EC07C"
 bspc rule -a "jetbrains-toolbox" state=floating follow=on
 bspc rule -a "blueman-manager" state=floating follow=on
 bspc rule -a "Pavucontrol" state=floating
-bspc rule -a "Firefox Developer Edition" desktop='^2'
+#bspc rule -a "Firefox Developer Edition" desktop='^2'
+#bspc rule -a "Firefox" desktop='^2'
 bspc rule -a "code" desktop='^3' split_dir=south
 bspc rule -a "Lutris" desktop='^8'
 bspc rule -a "Steam" desktop='^8'
@@ -41,13 +43,12 @@ bspc rule -a "World of Warcraft" desktop='^7' state=fullscreen
 bspc rule -a "Thunderbird" desktop='^11'
 
 sxhkd -c /home/nicentra/.config/sxhkd/sxhkdrc &
-/home/nicentra/.scripts/poly_launch.sh &
+feh --bg-scale ~/Dropbox/Wallpapers/bg.jpg &
+dropbox-cli start &
+blueman-applet &
 discord &
 thunderbird &
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
-feh --bg-scale ~/Dropbox/Wallpapers/bg.jpg &
 compton &
 dunst &
-blueman-applet &
-dropbox-cli start &
-
+/home/nicentra/.scripts/poly_launch.sh &

@@ -9,10 +9,10 @@ then
 fi
 if [ $1 == "" ]
 then
-    systemctl poweroff
+    poweroff
 fi
 
 if [ $1 == "" ]
 then
-    systemctl reboot
+    reboot
 fi

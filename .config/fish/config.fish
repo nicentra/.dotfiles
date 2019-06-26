@@ -40,10 +40,19 @@ set -x VISUAL nvim
 set -x _JAVA_AWT_WM_NONREPARENTING 1
 
 # Aliases
+alias emerge='sudo emerge'
+alias eselect='sudo eselect'
+alias emaint='sudo emaint'
+alias dispatch-conf='sudo dispatch-conf'
+alias etc-update='sudo etc-update'
+alias @world='emerge -auUDN --with-bdeps=y @world'
+alias eselect='sudo eselect'
+alias flaggie='sudo flaggie'
+alias userc='sudo $EDITOR /etc/portage/make.conf'
 alias xrc='$EDITOR ~/.Xresources'
 alias fishrc='$EDITOR /home/nicentra/.config/fish/config.fish && source /home/nicentra/.config/fish/config.fish'
 alias zshrc='$EDITOR /home/nicentra/.zshrc.pre-oh-my-zsh && source /home/nicentra/.zshrc.pre-oh-my-zsh'
-alias nnnrc='$EDITOR /home/nicentra/.nnnrc && source /home/nicentra/.zshrc.pre-oh-my-zsh'
+alias nnnrc='$EDITOR /home/nicentra/.nnnrc && source /home/nicentra/.config/fish/config.fish'
 alias vimrc='$EDITOR /home/nicentra/.vimrc'
 alias xinitrc='$EDITOR /home/nicentra/.xinitrc'
 alias rrc='$EDITOR /home/nicentra/.config/ranger/rc.conf'
@@ -71,3 +80,5 @@ alias comp='killall compton; compton & disown'
 alias comprc='$EDITOR /home/nicentra/.compton.conf && comp'
 alias ct="~/.config/base16-shell/colortest"
 alias dotrc='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+alias chummer='env WINEPREFIX=/home/nicentra/chummer/ WINEARCH=win32 wine /home/nicentra/Dropbox/RPG/Shadowrun/Chummer5/Chummer5.exe'
+alias kernelbk='cp /usr/src/linux/.config ~/.kernel/kernel-config-(uname -r)'
