@@ -1,7 +1,7 @@
 #/* vim:ft=i3config
 
 # Terminal Emulator
-set $term kitty
+set $term st
 
 # Mod Key
 set $mod Mod4
@@ -42,18 +42,13 @@ client.placeholder      $base00 $base00 $base05 $base00 $base00
 client.background		$base07
 
 ### Auto-start applications
-exec --no-startup-id polybar -r primary
-exec --no-startup-id polybar -r secondary
+exec_always --no-startup-id poly_launch_i3.sh
 exec --no-startup-id discord
-#exec --no-startup-id spotify
 exec --no-startup-id thunderbird
 exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
 exec --no-startup-id feh --bg-scale ~/Dropbox/Wallpapers/bg.jpg
-exec --no-startup-id compton --config ~/.compton.conf
+exec --no-startup-id compton
 exec --no-startup-id dunst
-exec --no-startup-id nm-applet
-exec --no-startup-id pamac-system-daemon
-exec --no-startup-id redshift-gtk
 exec --no-startup-id blueman-applet
 exec --no-startup-id dropbox-cli start
 

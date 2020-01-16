@@ -29,17 +29,13 @@ bspc config presel_feedback_color "#8EC07C"
 bspc rule -a "jetbrains-toolbox" state=floating follow=on
 bspc rule -a "blueman-manager" state=floating follow=on
 bspc rule -a "Pavucontrol" state=floating
-#bspc rule -a "Firefox Developer Edition" desktop='^2'
-#bspc rule -a "Firefox" desktop='^2'
+bspc rule -a "Firefox" desktop='^2'
 bspc rule -a "code" desktop='^3' split_dir=south
+bspc rule -a "battle.net.exe" desktop='^7'
 bspc rule -a "Lutris" desktop='^8'
 bspc rule -a "Steam" desktop='^8'
 bspc rule -a "Spotify" desktop='^9'
 bspc rule -a "discord" desktop='^10'
-bspc rule -a "Hearthstone" state=fullscreen
-bspc rule -a "battle.net.exe" desktop='^6'
-bspc rule -a "wow.exe" desktop='^7' state=fullscreen
-bspc rule -a "World of Warcraft" desktop='^7' state=fullscreen
 bspc rule -a "Thunderbird" desktop='^11'
 
 sxhkd -c /home/nicentra/.config/sxhkd/sxhkdrc &
