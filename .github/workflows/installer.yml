@@ -20,6 +20,7 @@ jobs:
         include:
           - { image: "archlinux:latest", answers: workstation }
           - { image: "archlinux:latest", answers: server }
+          - { image: "archlinux:latest", answers: agents }
           - { image: "debian:trixie", answers: workstation }
           - { image: "ubuntu:24.04", answers: workstation }
           - { image: "ubuntu:26.04", answers: workstation }

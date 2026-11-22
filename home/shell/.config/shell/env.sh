@@ -18,6 +18,7 @@ export BUN_INSTALL="$HOME/.bun"              # bun and bun global packages in bi
 
 # Each line goes in front of the previous ones: ~/.local/bin ends up first.
 _dotfiles_path_prepend "$HOME/.cargo/bin"
+_dotfiles_path_prepend "$HOME/.opencode/bin"     # opencode's installer has no other location
 _dotfiles_path_prepend "$BUN_INSTALL/bin"
 _dotfiles_path_prepend "$PNPM_HOME/bin"
 _dotfiles_path_prepend "$HOME/.local/bin"    # uv, uv tools and Pythons, claude, codex, agy

@@ -3,6 +3,7 @@
 import { ConfirmInput, MultiSelect, Select, Spinner, TextInput } from "@inkjs/ui";
 import { Box, Text, useInput, useWindowSize } from "ink";
 import { type ReactNode, useEffect, useState } from "react";
+import { HARNESSES, KNOWN_SKILLS } from "../agents.ts";
 import { type Answers, type Preset, presetAnswers } from "../answers.ts";
 import type { Plan } from "../plan.ts";
 import type { Platform } from "../platform.ts";
@@ -270,6 +271,66 @@ const SCREENS: Screen[] = [
     title: "Arch extras",
     when: (_a, p) => p.platform.family === "arch",
     render: toggles("extras", [{ key: "paru", label: "paru, an AUR helper" }]),
+  },
+  {
+    id: "agents",
+    title: "Agent harnesses",
+    hint: "nothing is installed unless you pick it; space toggles",
+    render: ({ a, next }) => (
+      <MultiSelect
+        options={HARNESSES.map((h) => ({ label: h.name, value: h.id }))}
+        defaultValue={a.agents.harnesses}
+        onSubmit={(on) => next((x) => ({ ...x, agents: { ...x.agents, harnesses: on } }))}
+      />
+    ),
+  },
+  {
+    id: "agents-setup",
+    title: "Agent setup",
+    when: (a) => a.agents.harnesses.length > 0,
+    render: ({ a, next }) => {
+      const options = [
+        { label: "The git-workflow rules as global instructions for each harness", value: "instructions" },
+        ...(a.agents.harnesses.includes("claude")
+          ? [{ label: "Claude Code settings from this repo (model, theme, vim mode)", value: "claudeSettings" }]
+          : []),
+      ];
+      return (
+        <MultiSelect
+          options={options}
+          defaultValue={options.filter((o) => a.agents[o.value as "instructions" | "claudeSettings"]).map((o) => o.value)}
+          onSubmit={(on) =>
+            next((x) => ({
+              ...x,
+              agents: {
+                ...x.agents,
+                instructions: on.includes("instructions"),
+                claudeSettings: x.agents.harnesses.includes("claude") ? on.includes("claudeSettings") : x.agents.claudeSettings,
+              },
+            }))
+          }
+        />
+      );
+    },
+  },
+  {
+    id: "skills",
+    title: "Skills",
+    hint: "linked for every harness you picked",
+    when: (a) => a.agents.harnesses.length > 0,
+    render: ({ a, next }) => {
+      const known = [
+        ...KNOWN_SKILLS,
+        ...a.agents.skills.filter((id) => !KNOWN_SKILLS.some((k) => k.id === id)).map((id) => ({ id, label: id })),
+      ];
+      return (
+        <MultiSelect
+          options={known.map((k) => ({ label: k.label, value: k.id }))}
+          defaultValue={a.agents.skills}
+          onSubmit={(on) => next((x) => ({ ...x, agents: { ...x.agents, skills: on } }))}
+        />
+      );
+    },
   },
   {
     id: "review",

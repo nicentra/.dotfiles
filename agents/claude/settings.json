@@ -1,0 +1,15 @@
+{
+  "model": "opus",
+  "worktree": {
+    "baseRef": "fresh"
+  },
+  "pluginConfigs": {
+    "cc-plugin-agents-md@builtin": {
+      "options": {
+        "instructionFiles": "claude-md-or-agents-md"
+      }
+    }
+  },
+  "theme": "dark",
+  "editorMode": "vim"
+}

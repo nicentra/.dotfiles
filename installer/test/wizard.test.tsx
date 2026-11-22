@@ -120,3 +120,31 @@ describe("mergeToolSelection", () => {
     expect(mergeToolSelection(["felix", "fzf", "bat"], ["fzf", "bat", "lazygit"], ["bat", "lazygit"])).toEqual(["felix", "bat", "lazygit"]);
   });
 });
+
+describe("agent screens", () => {
+  test("no harness is picked by default, and then there are no agent follow-ups", async () => {
+    const w = start();
+    const seen: string[] = [];
+    for (let i = 0; i < 30 && !w.ui.lastFrame()?.includes("Install now?"); i++) {
+      seen.push(w.ui.lastFrame() ?? "");
+      await w.press(ENTER);
+    }
+    const all = seen.join("\n");
+    expect(all).toContain("nothing is installed unless you pick it");
+    expect(all).not.toContain("Agent setup");
+    expect(all).not.toContain("linked for every harness");
+  });
+
+  test("picking Claude Code asks about setup and skills", async () => {
+    const w = start();
+    for (let i = 0; i < 30 && !w.ui.lastFrame()?.includes("nothing is installed unless"); i++) await w.press(ENTER);
+    await w.press(" ", ENTER); // Claude Code is first
+    expect(w.ui.lastFrame()).toContain("Agent setup");
+    expect(w.ui.lastFrame()).toContain("Claude Code settings");
+    await w.press(ENTER);
+    expect(w.ui.lastFrame()).toContain("git-workflow");
+    await w.toReview();
+    await w.press(ENTER);
+    expect((w.result() as Answers).agents.harnesses).toEqual(["claude"]);
+  });
+});
