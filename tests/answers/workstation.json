@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "preset": "workstation",
+  "git": { "name": "Test User", "email": "test@example.com", "signingKey": "" },
+  "bun": { "enabled": true, "via": "installer", "globals": ["@biomejs/biome"] }
+}

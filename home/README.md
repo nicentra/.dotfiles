@@ -11,13 +11,14 @@ package. Its contents mirror `$HOME`, and stow links each file into place.
 | `vim`       | `.vimrc`                                                         |                       |
 | `starship`  | `~/.config/starship.toml`                                        | starship              |
 | `fastfetch` | `~/.config/fastfetch/config.jsonc`                               | fastfetch             |
+| `dotfiles`  | `~/.local/bin/dotfiles` (reruns the installer)                   | bootstrap.sh's bun    |
 
 The zsh config skips any integration whose tool isn't installed, so it
 starts cleanly on a minimal machine.
 
 ## Linking by hand
 
-Until the installer exists:
+The installer does this. By hand:
 
 ```sh
 cd ~/Projects/.dotfiles

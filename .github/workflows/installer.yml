@@ -1,0 +1,42 @@
+# Unit tests for the installer, and a full install from bootstrap.sh in a
+# fresh container per target distro (tests/install-e2e.sh).
+name: Installer
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: installer
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+  e2e:
+    name: e2e ${{ matrix.image }} (${{ matrix.answers }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: "archlinux:latest", answers: workstation }
+          - { image: "archlinux:latest", answers: server }
+          - { image: "debian:trixie", answers: workstation }
+          - { image: "ubuntu:24.04", answers: workstation }
+          - { image: "ubuntu:26.04", answers: workstation }
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker run --rm -v "$PWD:/src:ro" "${{ matrix.image }}" sh /src/tests/install-e2e.sh "${{ matrix.answers }}"

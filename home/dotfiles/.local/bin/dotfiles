@@ -1,0 +1,25 @@
+#!/bin/sh
+# dotfiles: rerun the installer from this repo. Linked into ~/.local/bin by stow.
+#
+#   dotfiles                  pull the repo, then reapply the saved answers
+#   dotfiles --reconfigure    ask again
+#   dotfiles --dry-run        show what would change
+#   dotfiles --no-pull ...    skip the git pull
+set -eu
+
+# This file is a symlink into <repo>/home/dotfiles/.local/bin/.
+self=$(readlink -f "$0")
+repo=$(cd "$(dirname "$self")/../../../.." && pwd)
+bun=${DOTFILES_BUN:-$HOME/.local/share/dotfiles/bun/bun}
+[ -x "$bun" ] || bun=$(command -v bun) || { echo "dotfiles: bun not found; rerun bootstrap.sh" >&2; exit 1; }
+
+pull=1
+if [ "${1:-}" = --no-pull ]; then pull=0; shift; fi
+if [ $pull = 1 ] && [ -z "$(git -C "$repo" status --porcelain)" ] &&
+   [ "$(git -C "$repo" rev-parse --abbrev-ref HEAD)" = main ]; then
+  git -C "$repo" pull --ff-only --quiet || echo "dotfiles: git pull failed, continuing with the current checkout" >&2
+fi
+
+cd "$repo/installer"
+"$bun" install --frozen-lockfile --silent
+exec "$bun" run src/main.ts "$@"
