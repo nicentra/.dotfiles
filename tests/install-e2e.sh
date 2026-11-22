@@ -39,7 +39,7 @@ fi
 echo "::endgroup::"
 
 echo "::group::checks"
-as_tester "sh ~/Projects/.dotfiles/tests/verify.sh $answers"
+as_tester "sh ~/Projects/.dotfiles/tests/verify.sh"
 echo "::endgroup::"
 
 echo "::group::second run"

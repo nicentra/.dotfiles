@@ -250,7 +250,7 @@ export function uvStep(): Step {
       if (ctx.sh.has("uv")) return { status: "skipped", note: "already installed" };
       await runInstallScript(ctx, "https://astral.sh/uv/install.sh", "sh", { UV_NO_MODIFY_PATH: "1" });
       if (!ctx.sh.has("uv")) throw new Error("uv isn't on PATH after installing; expected it in ~/.local/bin");
-      return { status: "done", note: await ctx.sh.capture(["uv", "--version"]) };
+      return { status: "done", note: (await ctx.sh.capture(["uv", "--version"])).split(" ")[1] };
     },
   };
 }

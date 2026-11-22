@@ -1,9 +1,10 @@
 #!/bin/sh
 # Checks after an install, run as the user: the tools the answers asked for
 # are there, the shell starts cleanly and no installer edited the repo.
-#   sh tests/verify.sh <answers.json>
+# Reads the answers the installer saved, with every default filled in.
+#   sh tests/verify.sh [answers.json]
 set -eu
-answers=$1
+answers=${1:-$HOME/.config/dotfiles/answers.json}
 repo=$(cd "$(dirname "$0")/.." && pwd)
 failed=0
 pass() { echo "ok    $1"; }
@@ -58,7 +59,8 @@ case $p in "$HOME/.local/bin:"*) pass "PATH starts with ~/.local/bin" ;; *) fail
 if [ "$(git config --global init.defaultBranch)" = main ]; then pass "git reads the shared config"; else fail "git reads the shared config"; fi
 n=$(jq -r '.git.name // ""' "$answers")
 if [ -n "$n" ]; then
-  if [ "$(git config --global user.name)" = "$n" ]; then pass "git identity from ~/.gitconfig.local"; else fail "git identity"; fi
+  # Not --global: that reads ~/.gitconfig without following its include.
+  if [ "$(git config user.name)" = "$n" ]; then pass "git identity from ~/.gitconfig.local"; else fail "git identity" "$(git config user.name)"; fi
 fi
 
 # No installer wrote through the rc symlinks into the repo.

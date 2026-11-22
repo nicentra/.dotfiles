@@ -48,7 +48,7 @@ export function platformFromOsRelease(osRelease: string, arch: Arch, wsl: boolea
     throw new Error(`Unsupported Linux distribution "${r.PRETTY_NAME ?? id}". Supported: ${SUPPORTED.join(", ")}.`);
   }
   const name = r.NAME?.replace(/ (GNU\/)?Linux$/, "") ?? id;
-  const version = r.VERSION_ID ?? "";
+  const version = id === "arch" ? "" : (r.VERSION_ID ?? ""); // rolling; images put a build date there
   return {
     os: "linux",
     id,
@@ -75,9 +75,12 @@ export function detectPlatform(): Platform {
     throw new Error(`Unsupported OS "${process.platform}". Supported: ${SUPPORTED.join(", ")}.`);
   }
   const osRelease = existsSync("/etc/os-release") ? readFileSync("/etc/os-release", "utf8") : "";
+  // Containers on a WSL host share its kernel, so /proc/version alone would call them WSL too.
+  const container = existsSync("/.dockerenv") || existsSync("/run/.containerenv");
   const wsl =
     Boolean(process.env.WSL_DISTRO_NAME) ||
-    (existsSync("/proc/version") && /microsoft/i.test(readFileSync("/proc/version", "utf8")));
+    existsSync("/run/WSL") ||
+    (!container && existsSync("/proc/version") && /microsoft/i.test(readFileSync("/proc/version", "utf8")));
   return platformFromOsRelease(osRelease, arch, wsl);
 }
 
