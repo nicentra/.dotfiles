@@ -76,7 +76,8 @@ fi
 # 4. the installer, on the terminal even when this script came through a pipe
 cd "$DIR/installer"
 "$RT/bun" install --frozen-lockfile --silent
-if [ -t 0 ] || ! { : </dev/tty; } 2>/dev/null; then
+# Probe /dev/tty in a subshell: a failed redirect on a special built-in would end this shell.
+if [ -t 0 ] || ! (: </dev/tty) 2>/dev/null; then
   exec "$RT/bun" run src/main.ts "$@"
 else
   exec "$RT/bun" run src/main.ts "$@" </dev/tty
