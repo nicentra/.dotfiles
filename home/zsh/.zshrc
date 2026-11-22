@@ -2,24 +2,12 @@ export ZSH="$HOME/.oh-my-zsh"
 # export LANG=en_US.UTF-8
 # export LC_ALL=en_US.UTF-8
 
-if [[ -z "$__ORIGINAL_PATH" ]]; then
-  # If backup doesn't exist, create it
-  export __ORIGINAL_PATH="$PATH"
-else
-  export PATH="$__ORIGINAL_PATH"
-fi
-
 ZSH_THEME=""
 
 plugins=(
   zsh-autosuggestions
   zsh-syntax-highlighting
 )
-
-# gtr (Git Worktree Runner) completion for `gtr` and `git gtr`; must come
-# before compinit, which oh-my-zsh runs
-zstyle ':completion:*:*:git:*' user-commands gtr:'Git worktree management'
-fpath=("$HOME/.local/share/gtr/completions" $fpath)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -69,17 +57,3 @@ if [ -f /usr/bin/fastfetch ]; then
   clear
   fastfetch
 fi
-
-# bun completions
-[ -s "/home/nicentra/.bun/_bun" ] && source "/home/nicentra/.bun/_bun"
-
-# Added by Antigravity CLI installer
-export PATH="/home/nicentra/.local/bin:$PATH"
-
-# pnpm
-export PNPM_HOME='/home/nicentra/.local/share/pnpm'
-case ":$PATH:" in
-  ":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
