@@ -57,6 +57,9 @@ printf '[user]\ndefault=$user\n' >> /etc/wsl.conf
 }
 
 Write-Host "Running the dotfiles installer in $distro" -ForegroundColor Cyan
-$run = "sh -c `"`$(curl -fsSL $bootstrap)`" - $installerArgs"
+# No double quotes in arguments to wsl.exe: Windows PowerShell 5.1 doesn't
+# escape them for native programs. A file instead of a pipe keeps stdin on
+# the terminal for the installer's questions.
+$run = "f=`$(mktemp) && curl -fsSL $bootstrap -o `$f && sh `$f $installerArgs; rc=`$?; rm -f `$f; exit `$rc"
 wsl.exe --distribution $distro --cd '~' -- sh -c $run
 exit $LASTEXITCODE
