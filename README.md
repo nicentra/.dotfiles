@@ -32,6 +32,12 @@ dotfiles --dry-run    # show the steps without running them
 dotfiles --no-pull    # skip the git pull
 ```
 
+On a workstation the installer also sets up GitHub. It logs in with
+`gh` (in the browser), creates an SSH key if there's none and adds it to
+the account. It then reuses or creates a GPG key, adds that too, and turns
+on signed commits. These steps need you at the terminal, so runs without
+one skip them and say so.
+
 The answers are saved in `~/.config/dotfiles/answers.json`. Each step checks
 first, so a rerun only does what changed. Files that linking replaces are
 moved to `~/.dotfiles-backup/<time>/`, and every run writes a log to
@@ -92,7 +98,7 @@ twice, and the second run must change nothing.
 
 1. ~~Reset this repo and import the current configs as stow packages.~~
 2. ~~Installer engine and manifest, headless, tested in Docker.~~
-3. GitHub CLI login, SSH and GPG keys.
+3. ~~GitHub CLI login, SSH and GPG keys.~~
 4. The TUI on top of the engine.
 5. Agents: harnesses (opt-in), instructions, settings, skills.
 6. ~~A neovim config.~~
