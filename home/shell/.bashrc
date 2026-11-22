@@ -10,6 +10,10 @@
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
+# gpg's pinentry asks for passphrases on the current terminal.
+GPG_TTY=$(tty)
+export GPG_TTY
+
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 PS1='[\u@\h \W]\$ '
