@@ -163,6 +163,8 @@ export function tool(id: string): Tool {
 export interface Probe {
   /** apt's candidate version for a package, or undefined if it has none. */
   aptCandidate(pkg: string): Promise<string | undefined>;
+  /** Whether a native package (pacman or dpkg) is installed. */
+  nativeInstalled(pkg: string): Promise<boolean>;
 }
 
 export function methodApplies(m: Method, family: Family): boolean {

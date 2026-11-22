@@ -58,7 +58,11 @@ export async function buildPlan(ctx: Ctx): Promise<Plan> {
     else if (m.kind === "github") github.push(githubToolStep(t, m));
   }
 
-  if (native.length) steps.push(systemPackagesStep(native));
+  // Libraries the runtimes need that minimal images lack: nodejs.org's Node links libatomic.
+  const libs: string[] = [];
+  if (a.node.enabled && ctx.platform.family === "debian" && !(await ctx.probe.nativeInstalled("libatomic1"))) libs.push("libatomic1");
+
+  if (native.length || libs.length) steps.push(systemPackagesStep(native, libs));
   const pkgs = dotfilePackages(a);
   steps.push(linkStep(pkgs.link, pkgs.copy));
   if (a.shell.zsh && a.shell.ohMyZsh) steps.push(ohMyZshStep(a.shell.plugins));

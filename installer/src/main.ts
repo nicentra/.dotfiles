@@ -79,6 +79,11 @@ async function main(argv: string[]): Promise<number> {
       const v = out?.stdout.match(/Candidate:\s*(\S+)/)?.[1];
       return v && v !== "(none)" ? v : undefined;
     },
+    async nativeInstalled(pkg) {
+      if (platform.family === "arch") return sh.ok(["pacman", "-Q", pkg]);
+      const out = await sh.run(["dpkg-query", "-W", "-f=${Status}", pkg], { allowFail: true }).catch(() => undefined);
+      return out?.stdout.includes("install ok installed") ?? false;
+    },
   };
   const ctx: Ctx = { platform, answers, home, repo, user: userInfo().username, sh, probe, backup: new Backup(home, stamp) };
   const plan = await buildPlan(ctx);

@@ -37,8 +37,9 @@ export const APT: Record<string, Record<string, string>> = {
   },
 };
 
-export const probe = (key?: keyof typeof APT): Probe => ({
+export const probe = (key?: keyof typeof APT, installed: string[] = []): Probe => ({
   aptCandidate: async (pkg) => (key ? APT[key]?.[pkg] : undefined),
+  nativeInstalled: async (pkg) => installed.includes(pkg),
 });
 
 /** A Shell that finds no commands and records what it would run. */

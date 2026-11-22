@@ -26,6 +26,15 @@ describe("plan", () => {
     expect(plan.notes).toEqual(["felix: no way to install it on Debian 13, skipped"]);
   });
 
+  test("Node on Debian and Ubuntu brings libatomic1, unless it's installed", async () => {
+    const pkgs = async (installed: string[]) => {
+      const plan = await buildPlan(fakeCtx(platform("ubuntu2404"), presetAnswers("workstation"), { probe: probe("ubuntu2404", installed) }));
+      return plan.steps.find((s) => s.id === "system-packages")?.detail[0]?.split(" ") ?? [];
+    };
+    expect(await pkgs([])).toContain("libatomic1");
+    expect(await pkgs(["libatomic1"])).not.toContain("libatomic1");
+  });
+
   test("server: no runtimes, no paru", async () => {
     expect(await ids(platform("arch"), presetAnswers("server"))).toEqual([
       "system-packages", "link", "oh-my-zsh", "git-identity", "login-shell",

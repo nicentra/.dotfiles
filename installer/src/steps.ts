@@ -29,8 +29,9 @@ export async function installedVersionOk(ctx: Ctx, t: Tool): Promise<boolean> {
   return version === undefined || compareVersions(version, t.minVersion.min) >= 0;
 }
 
-export function systemPackagesStep(items: { tool: Tool; method: Native }[]): Step {
-  const pkgs = [...new Set(items.flatMap((i) => i.method.pkgs))];
+/** Native packages for the tools in `items`, plus `extra` packages that aren't tools (libraries). */
+export function systemPackagesStep(items: { tool: Tool; method: Native }[], extra: string[] = []): Step {
+  const pkgs = [...new Set([...items.flatMap((i) => i.method.pkgs), ...extra])];
   return {
     id: "system-packages",
     title: "System packages",
