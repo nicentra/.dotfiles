@@ -1,0 +1,4 @@
+# Gitignored files that `git wt new` (and Claude Code) copy into every new worktree.
+# gitignore syntax; one pattern per line; `!pattern` excludes.
+# Production secrets are deliberately not listed: worktrees are for development.
+# Without this file, git wt copies .env, .env.* and .dev.vars, except *prod* files.

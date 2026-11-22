@@ -1,0 +1,36 @@
+# Added by `git wt setup --releases`. Every push to __DEFAULT_BRANCH__ updates one open
+# release PR (version bump + CHANGELOG.md). Merging that PR tags the release and
+# publishes a GitHub Release. Config: release-please-config.json and
+# .release-please-manifest.json.
+name: Release
+
+on:
+  push:
+    branches: [__DEFAULT_BRANCH__]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+
+  # Tags and releases made with GITHUB_TOKEN do not trigger other workflows, so
+  # whatever should happen on a release (build a Docker image, publish a
+  # package) goes here as a job that waits for release-please:
+  #
+  # publish:
+  #   needs: release-please
+  #   if: needs.release-please.outputs.release_created == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #     - run: echo "publishing ${{ needs.release-please.outputs.tag_name }}"

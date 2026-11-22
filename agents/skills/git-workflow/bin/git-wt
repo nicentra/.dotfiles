@@ -1,0 +1,764 @@
+#!/usr/bin/env bash
+# git-wt: worktree + PR lifecycle for repos in ~/Projects.
+# Procedures and rationale: ../SKILL.md   Install/update: ../install.sh
+#
+#   git wt new <type>/<name> [--base <ref>] [--no-pr] [-C <repo>]
+#   git wt pr                         open the (draft) PR for the current branch if missing
+#   git wt merge [<pr>]               squash-merge the PR; clean up when not run from inside it
+#   git wt rm <path|branch> [--force] [-C <repo>]
+#   git wt sweep [--dry-run]          clean up everything merged, in every ~/Projects repo
+#   git wt ls                         worktrees with PR state
+#   git wt setup [--releases <node|python|rust|go|simple>] [--no-github]
+#   git wt hook-create | hook-remove | guard     Claude Code hooks (JSON on stdin)
+set -euo pipefail
+
+WT_ROOT="${GIT_WT_ROOT:-$HOME/Worktrees}"
+PROJECTS_ROOT="${GIT_WT_PROJECTS:-$HOME/Projects}"
+SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")"
+TEMPLATES="$(cd "$(dirname "$SELF")/../templates" && pwd)"
+
+BRANCH_TYPES='feat|fix|chore|hotfix|release|feature|bugfix'
+BRANCH_RE="^(${BRANCH_TYPES})/[a-z0-9]+([.-][a-z0-9]+)*\$"
+COMMIT_TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+HEADER_RE="^(${COMMIT_TYPES})(\([a-z0-9][a-z0-9._/-]*\))?!?: [^A-Z[:space:]].*\$"
+WIP_PREFIX='[WIP] '
+
+# ── helpers ────────────────────────────────────────────────────────────────
+log() { printf 'git-wt: %s\n' "$*" >&2; }
+die() { log "$*"; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+need() { have "$1" || die "$1 is required but not installed"; }
+usage() { sed -n '2,12p' "$SELF" | sed 's/^# \{0,1\}//'; }
+
+# Paths: POSIX inside the script, native (C:/...) when handed back to Claude Code on Windows.
+posix() { if have cygpath; then cygpath -u "$1"; else printf '%s\n' "$1"; fi; }
+out_path() { if have cygpath; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
+norm() { (cd "$1" 2>/dev/null && pwd -P) || printf '%s\n' "$1"; }
+inside() { case "$(norm "$1")/" in "$(norm "$2")"/*) return 0 ;; esac; return 1; }  # is $1 inside $2?
+
+main_root() {
+  local common
+  common=$(git -C "${1:-.}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) ||
+    die "not inside a git repository: ${1:-$PWD}"
+  [[ $(basename "$common") == .git ]] || die "unsupported repository layout: $common"
+  posix "$(dirname "$common")"
+}
+
+has_origin() { local u; u=$(git -C "$1" remote get-url origin 2>/dev/null) && [[ -n $u ]]; }
+current_branch() { git -C "$1" symbolic-ref --quiet --short HEAD 2>/dev/null || true; }
+
+default_branch() {
+  local r="$1" ref
+  if ref=$(git -C "$r" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); then
+    printf '%s\n' "${ref#origin/}"; return 0
+  fi
+  if [[ ${2:-} != quick ]] && has_origin "$r" && git -C "$r" remote set-head origin --auto >/dev/null 2>&1 &&
+    ref=$(git -C "$r" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); then
+    printf '%s\n' "${ref#origin/}"; return 0
+  fi
+  for ref in main master; do
+    if git -C "$r" show-ref --verify --quiet "refs/heads/$ref"; then printf '%s\n' "$ref"; return 0; fi
+  done
+  printf 'main\n'
+}
+
+# "<path>\t<branch>" for every worktree of the repo (branch empty when detached)
+list_worktrees() {
+  local p b
+  while IFS=$'\t' read -r p b; do
+    printf '%s\t%s\n' "$(posix "$p")" "$b"
+  done < <(git -C "$1" worktree list --porcelain | awk '
+    /^worktree /{p=substr($0,10); b=""} /^branch /{b=substr($0,19)}
+    /^$/{if(p!="") print p "\t" b; p=""} END{if(p!="") print p "\t" b}')
+}
+
+worktree_for_branch() {
+  local p b
+  while IFS=$'\t' read -r p b; do
+    if [[ $b == "$2" ]]; then printf '%s\n' "$p"; return 0; fi
+  done < <(list_worktrees "$1")
+  return 0
+}
+
+branch_type() {
+  case "${1%%/*}" in feature) echo feat ;; bugfix | hotfix) echo fix ;; release) echo chore ;; *) echo "${1%%/*}" ;; esac
+}
+
+# ── env files ──────────────────────────────────────────────────────────────
+# gitignore-ish match: no slash → basename; leading / or inner slash → repo-relative path
+# shellcheck disable=SC2053 # the right-hand sides are globs on purpose
+_match() {
+  local path="$1" pat="${2%/}"
+  if [[ $pat == '**/'* ]]; then
+    [[ ${path##*/} == ${pat#\*\*/} || $path == $pat ]]
+  elif [[ $pat == /* ]]; then
+    [[ $path == ${pat#/} ]]
+  elif [[ $pat == */* ]]; then
+    [[ $path == $pat ]]
+  else
+    [[ ${path##*/} == $pat ]]
+  fi
+}
+
+# Gitignored entries of <root> that match .worktreeinclude (or the defaults), one per line.
+matching_ignored() {
+  local src="$1" line entry name pat match
+  local -a pats=()
+  if [[ -f $src/.worktreeinclude && ${2:-} != defaults ]]; then
+    while IFS= read -r line || [[ -n $line ]]; do
+      line="${line%$'\r'}"
+      [[ -z ${line//[[:space:]]/} || $line == \#* ]] && continue
+      pats+=("$line")
+    done <"$src/.worktreeinclude"
+  else
+    pats=('.env' '.env.*' '.dev.vars' '!.env*prod*' '!.env.example' '!.env.sample' '!.env.template')
+  fi
+  ((${#pats[@]})) || return 0
+  while IFS= read -r -d '' entry; do
+    name="${entry%/}"
+    match=0
+    for pat in "${pats[@]}"; do
+      if [[ $pat == '!'* ]]; then
+        if _match "$name" "${pat#!}"; then match=0; fi
+      elif _match "$name" "$pat"; then
+        match=1
+      fi
+    done
+    if ((match)); then printf '%s\n' "$name"; fi
+  done < <(git -C "$src" ls-files -z --others --ignored --exclude-standard --directory)
+  return 0
+}
+
+copy_ignored() {
+  local src="$1" dst="$2" name n=0 p copy_of
+  local -a prods=()
+  # production env files, so that a file which is currently a copy of one (e.g. .env) isn't copied either
+  while IFS= read -r -d '' p; do
+    p="${p%/}"
+    if [[ ${p##*/} == *prod* && -f $src/$p ]]; then prods+=("$p"); fi
+  done < <(git -C "$src" ls-files -z --others --ignored --exclude-standard --directory)
+  while IFS= read -r name; do
+    [[ -e $dst/$name ]] && continue
+    copy_of=""
+    if [[ -f $src/$name ]]; then
+      for p in "${prods[@]}"; do
+        if [[ $p != "$name" ]] && cmp -s "$src/$name" "$src/$p"; then copy_of="$p"; break; fi
+      done
+    fi
+    if [[ -n $copy_of ]]; then log "skipped $name: it is currently a copy of $copy_of"; continue; fi
+    mkdir -p "$dst/$(dirname "$name")"
+    cp -R "$src/$name" "$dst/$name"
+    log "copied $name"
+    n=$((n + 1))
+  done < <(matching_ignored "$src")
+  ((n)) || log "no env/secret files to copy (configure with .worktreeinclude)"
+  return 0
+}
+
+install_deps() {
+  local d="$1"
+  [[ -n ${GIT_WT_NO_INSTALL:-} ]] && return 0
+  if [[ -f $d/bun.lock || -f $d/bun.lockb ]] && have bun; then run_in "$d" bun install
+  elif [[ -f $d/pnpm-lock.yaml ]] && have pnpm; then run_in "$d" pnpm install --frozen-lockfile
+  elif [[ -f $d/package-lock.json ]] && have npm; then run_in "$d" npm ci
+  elif [[ -f $d/yarn.lock ]] && have yarn; then run_in "$d" yarn install --frozen-lockfile
+  fi
+  if [[ -f $d/uv.lock ]] && have uv; then run_in "$d" uv sync; fi
+  return 0
+}
+
+# Per-repo setup commands for new worktrees: git config --add wt.postCreate "<command>"
+run_post_create() {
+  local root="$1" wt="$2" c
+  while IFS= read -r c; do
+    if [[ -n $c ]]; then run_in "$wt" bash -c "$c"; fi
+  done < <(git -C "$root" config --get-all wt.postCreate 2>/dev/null || true)
+  return 0
+}
+
+run_in() {
+  local d="$1"; shift
+  log "running: $*"
+  if ! (cd "$d" && "$@" </dev/null >&2); then log "warning: '$*' failed; continuing"; fi
+}
+
+# ── PRs ────────────────────────────────────────────────────────────────────
+open_pr() { # <worktree> <branch> <default-branch>
+  local wt="$1" b="$2" def="$3" url title desc issue="" body out
+  has_origin "$wt" || { log "no usable 'origin' remote; skipping PR"; return 0; }
+  have gh || { log "gh is not installed; skipping PR"; return 0; }
+  url=$(cd "$wt" && gh pr list --head "$b" --state open --json url -q '.[0].url // empty' 2>/dev/null || true)
+  if [[ -n $url ]]; then log "PR already open: $url"; return 0; fi
+
+  if [[ $(git -C "$wt" rev-list --count "origin/$def..HEAD" 2>/dev/null || echo 0) == 0 ]]; then
+    if ! git -C "$wt" commit --allow-empty --quiet -m "chore: start $b" </dev/null >&2; then
+      log "could not create the initial empty commit; skipping PR (run 'git wt pr' later)"; return 0
+    fi
+  fi
+  if ! git -C "$wt" push --quiet -u origin "$b" </dev/null >&2; then
+    log "push failed; skipping PR (run 'git wt pr' later)"; return 0
+  fi
+
+  desc="${b#*/}"
+  if [[ $desc =~ ^([0-9]+)-(.+)$ ]]; then issue="${BASH_REMATCH[1]}"; desc="${BASH_REMATCH[2]}"; fi
+  title="$(branch_type "$b"): ${desc//-/ }"
+  body="Work in progress. The title and this description get rewritten before the PR is marked ready."
+  [[ -n $issue ]] && body+=$'\n\n'"Closes #$issue"
+
+  if out=$(cd "$wt" && gh pr create --draft --base "$def" --head "$b" --title "$title" --body "$body" </dev/null 2>&1); then
+    log "opened draft PR: $(pr_url "$out")"
+  elif [[ $out == *[Dd]raft* ]]; then
+    # GitHub Free has no draft PRs in private repos: use a [WIP] title as the draft marker instead.
+    if out=$(cd "$wt" && gh pr create --base "$def" --head "$b" --title "$WIP_PREFIX$title" --body "$body" </dev/null 2>&1); then
+      log "drafts unavailable here; opened WIP PR: $(pr_url "$out")"
+    else
+      log "gh pr create failed: $out"
+    fi
+  else
+    log "gh pr create failed: $out"
+  fi
+  return 0
+}
+
+pr_url() { grep -oE 'https://[^[:space:]]+/pull/[0-9]+' <<<"$1" | head -1 || printf '%s\n' "$1"; }
+
+# Number of a merged PR for <branch> that contains <tip>, if any.
+merged_pr_for() {
+  local root="$1" b="$2" tip="$3" json num oid
+  has_origin "$root" && have gh || return 1
+  json=$(cd "$root" && gh pr list --head "$b" --state merged --limit 20 --json number,headRefOid 2>/dev/null) || return 1
+  while read -r num oid; do
+    [[ -n $oid ]] || continue
+    if [[ $oid == "$tip" ]] || git -C "$root" merge-base --is-ancestor "$tip" "$oid" 2>/dev/null; then
+      printf '%s\n' "$num"; return 0
+    fi
+  done < <(jq -r '.[] | "\(.number) \(.headRefOid)"' <<<"$json")
+  return 1
+}
+
+# ── cleanup ────────────────────────────────────────────────────────────────
+prune_empty() {
+  local d; d=$(dirname "$1")
+  while [[ $d == "$WT_ROOT"/* ]] && rmdir "$d" 2>/dev/null; do d=$(dirname "$d"); done
+  return 0
+}
+
+remove_worktree() { # <root> <path> <force>
+  local root="$1" wt="$2" force="$3"
+  if ((!force)) && [[ -n $(git -C "$wt" status --porcelain 2>/dev/null) ]]; then
+    log "not removing $wt: it has uncommitted or untracked changes"; return 1
+  fi
+  if ((force)); then git -C "$root" worktree remove --force "$wt" >&2; else git -C "$root" worktree remove "$wt" >&2; fi
+  log "removed worktree $wt"
+  prune_empty "$wt"
+}
+
+# Delete a local branch (and its leftover remote branch) only when nothing would be lost.
+cleanup_branch() { # <root> <branch>
+  local root="$1" b="$2" def tip pr reason=""
+  [[ -n $b ]] || return 0
+  def=$(default_branch "$root" quick)
+  [[ $b != "$def" ]] || return 0
+  tip=$(git -C "$root" rev-parse --verify --quiet "refs/heads/$b") || return 0
+  if pr=$(merged_pr_for "$root" "$b" "$tip"); then
+    reason="merged in #$pr"
+    if git -C "$root" show-ref --verify --quiet "refs/remotes/origin/$b"; then
+      if git -C "$root" push --quiet origin --delete "$b" </dev/null >&2; then log "deleted remote branch origin/$b"
+      else log "could not delete remote branch origin/$b"; fi
+    fi
+  elif git -C "$root" merge-base --is-ancestor "$tip" "refs/remotes/origin/$def" 2>/dev/null ||
+    git -C "$root" merge-base --is-ancestor "$tip" "refs/heads/$def" 2>/dev/null; then
+    reason="no commits beyond $def"
+  elif [[ $(git -C "$root" rev-parse --verify --quiet "refs/remotes/origin/$b" 2>/dev/null) == "$tip" ]]; then
+    reason="fully pushed to origin/$b"
+  fi
+  if [[ -n $reason ]]; then
+    git -C "$root" branch -D --quiet "$b" >&2
+    log "deleted branch $b ($reason)"
+  else
+    log "kept branch $b: it has commits that exist nowhere else (git branch -D $b discards them)"
+  fi
+}
+
+ff_main() { # fast-forward the main checkout when it is clean and on the default branch
+  local root="$1" def before after
+  has_origin "$root" || return 0
+  def=$(default_branch "$root" quick)
+  [[ $(current_branch "$root") == "$def" ]] || return 0
+  if [[ -n $(git -C "$root" status --porcelain --untracked-files=no) ]]; then
+    log "$(basename "$root"): main checkout has local changes; not updating it"; return 0
+  fi
+  before=$(git -C "$root" rev-parse HEAD)
+  git -C "$root" merge --ff-only --quiet "origin/$def" >/dev/null 2>&1 || { log "$(basename "$root"): could not fast-forward $def"; return 0; }
+  after=$(git -C "$root" rev-parse HEAD)
+  [[ $before == "$after" ]] || log "$(basename "$root"): fast-forwarded $def"
+  return 0
+}
+
+# ── commands ───────────────────────────────────────────────────────────────
+cmd_new() {
+  local branch="" base="" from="." no_pr=0 scratch=0
+  while (($#)); do
+    case $1 in
+      --base) base="${2:?--base needs a ref}"; shift 2 ;;
+      --no-pr) no_pr=1; shift ;;
+      --scratch) scratch=1; shift ;;
+      -C) from="${2:?-C needs a path}"; shift 2 ;;
+      -h | --help) usage; return 0 ;;
+      -*) die "unknown option: $1" ;;
+      *) [[ -z $branch ]] || die "unexpected argument: $1"; branch="$1"; shift ;;
+    esac
+  done
+  [[ -n $branch ]] || die "usage: git wt new <type>/<name> [--base <ref>] [--no-pr]"
+  if [[ $branch =~ $BRANCH_RE ]]; then
+    :
+  elif [[ $branch =~ ^(${BRANCH_TYPES})/ ]]; then
+    die "'$branch' is not a Conventional Branch name: lowercase letters, digits and hyphens (dots for versions), e.g. feat/gif-previews or fix/42-null-guild-id"
+  elif ((scratch)); then
+    branch="scratch/$branch"; no_pr=1
+  else
+    die "branch must start with feat/, fix/, chore/, hotfix/ or release/ (got '$branch')"
+  fi
+
+  local root project path existing def
+  root=$(main_root "$from")
+  project=$(basename "$root")
+  path="$WT_ROOT/$project/$branch"
+  def=$(default_branch "$root")
+
+  existing=$(worktree_for_branch "$root" "$branch")
+  if [[ -n $existing ]]; then
+    log "worktree for $branch already exists"
+    ((no_pr)) || open_pr "$existing" "$branch" "$def"
+    out_path "$existing"; return 0
+  fi
+  [[ ! -e $path ]] || die "$path exists but is not a worktree of $project"
+
+  if has_origin "$root"; then
+    git -C "$root" fetch --quiet --prune origin </dev/null >&2 || log "fetch failed; using local refs"
+    base="${base:-origin/$def}"
+  else
+    base="${base:-$def}"
+  fi
+  mkdir -p "$(dirname "$path")"
+  if git -C "$root" show-ref --verify --quiet "refs/heads/$branch"; then
+    git -C "$root" worktree add --quiet "$path" "$branch" >&2
+    log "created $path (existing branch $branch)"
+  elif git -C "$root" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    git -C "$root" worktree add --quiet --track -b "$branch" "$path" "origin/$branch" >&2
+    log "created $path (tracking origin/$branch)"
+  else
+    git -C "$root" worktree add --quiet --no-track -b "$branch" "$path" "$base" >&2
+    log "created $path ($branch from $base)"
+  fi
+  copy_ignored "$root" "$path"
+  install_deps "$path"
+  run_post_create "$root" "$path"
+  ((no_pr)) || open_pr "$path" "$branch" "$def"
+  out_path "$path"
+}
+
+cmd_pr() {
+  local top b root def
+  top=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a git repository"
+  top=$(posix "$top"); b=$(current_branch "$top"); root=$(main_root "$top"); def=$(default_branch "$root")
+  [[ -n $b ]] || die "detached HEAD"
+  [[ $b != "$def" ]] || die "on $def; start a worktree with: git wt new <type>/<name>"
+  open_pr "$top" "$b" "$def"
+}
+
+cmd_merge() {
+  local sel="" json num title body draft state head root wt
+  while (($#)); do
+    case $1 in
+      -*) die "unknown option: $1" ;;
+      *) sel="$1"; shift ;;
+    esac
+  done
+  need gh; need jq
+  json=$(gh pr view ${sel:+"$sel"} --json number,title,body,isDraft,state,headRefName) || die "no PR found"
+  num=$(jq -r .number <<<"$json"); title=$(jq -r .title <<<"$json"); body=$(jq -r .body <<<"$json")
+  draft=$(jq -r .isDraft <<<"$json"); state=$(jq -r .state <<<"$json"); head=$(jq -r .headRefName <<<"$json")
+  [[ $state == OPEN ]] || die "PR #$num is $state"
+  [[ $title != "$WIP_PREFIX"* ]] || die "PR #$num is still marked WIP; rewrite its title first: gh pr edit $num --title '<type>(<scope>): <subject>'"
+  [[ $title =~ $HEADER_RE ]] || die "PR #$num title is not a Conventional Commit header: '$title'. Fix it first: gh pr edit $num --title '…'"
+  if [[ $draft == true ]]; then gh pr ready "$num" >&2; fi
+  body=$(sed '/<!--/,/-->/d' <<<"$body")   # template comments don't belong in the commit
+  gh pr merge "$num" --squash --subject "$title (#$num)" --body "$body" >&2 || die "merge failed (checks pending, conflicts, or missing permissions?)"
+  log "squash-merged #$num: $title"
+
+  root=$(main_root .)
+  git -C "$root" fetch --quiet --prune origin </dev/null >&2 || true
+  ff_main "$root"
+  wt=$(worktree_for_branch "$root" "$head")
+  if [[ -n $wt ]] && inside "$PWD" "$wt"; then
+    log "next: leave the worktree, then run: git wt rm $(out_path "$wt")"
+    return 0
+  fi
+  if [[ -n $wt ]]; then remove_worktree "$root" "$wt" 0 || return 0; fi
+  cleanup_branch "$root" "$head"
+  git -C "$root" worktree prune
+}
+
+cmd_rm() {
+  local target="" force=0 from="." root wt b from_hook=0
+  while (($#)); do
+    case $1 in
+      -f | --force) force=1; shift ;;
+      -C) from="${2:?-C needs a path}"; shift 2 ;;
+      --from-hook) from_hook=1; shift ;;
+      -*) die "unknown option: $1" ;;
+      *) target="$1"; shift ;;
+    esac
+  done
+  [[ -n $target ]] || die "usage: git wt rm <path|branch> [--force]"
+  if [[ -d $target ]] && git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    wt=$(posix "$(git -C "$target" rev-parse --show-toplevel)")
+    root=$(main_root "$wt"); b=$(current_branch "$wt")
+  else
+    root=$(main_root "$from"); b="$target"; wt=$(worktree_for_branch "$root" "$b")
+  fi
+  if [[ -n $wt ]]; then
+    [[ $(norm "$wt") != "$(norm "$root")" ]] || die "refusing to remove the main checkout"
+    if ((!from_hook)) && inside "$PWD" "$wt"; then
+      die "the current directory is inside $wt; leave it first (Claude: ExitWorktree with action keep), then rerun"
+    fi
+    if ((from_hook)); then cd "$root"; fi
+    remove_worktree "$root" "$wt" "$force" || exit 1
+  fi
+  cleanup_branch "$root" "$b"
+  git -C "$root" worktree prune
+}
+
+sweep_repo() {
+  local root="$1" dry="$2" def wt b tip pr did=0 name
+  name=$(basename "$root")
+  if has_origin "$root"; then git -C "$root" fetch --quiet --prune origin </dev/null 2>/dev/null || log "$name: fetch failed"; fi
+  def=$(default_branch "$root" quick)
+
+  while IFS=$'\t' read -r wt b; do
+    [[ -n $b && $(norm "$wt") != "$(norm "$root")" ]] || continue
+    tip=$(git -C "$root" rev-parse --verify --quiet "refs/heads/$b") || continue
+    if [[ $b == scratch/* ]]; then
+      # throwaway worktrees (subagents): only once they are over an hour old and hold nothing unique
+      [[ -n $(find "$wt/.git" -maxdepth 0 -mmin +60 2>/dev/null) ]] || continue
+      git -C "$root" merge-base --is-ancestor "$tip" "refs/remotes/origin/$def" 2>/dev/null ||
+        git -C "$root" merge-base --is-ancestor "$tip" "refs/heads/$def" 2>/dev/null || {
+        log "$name: kept $wt ($b has commits of its own)"; continue
+      }
+      pr="scratch"
+    else
+      pr=$(merged_pr_for "$root" "$b" "$tip") || continue
+      pr="#$pr"
+    fi
+    did=1
+    if ((dry)); then log "$name: would remove $wt and branch $b ($pr)"; continue; fi
+    if inside "$PWD" "$wt"; then log "$name: skipped $wt (current directory)"; continue; fi
+    remove_worktree "$root" "$wt" 0 && cleanup_branch "$root" "$b"
+  done < <(list_worktrees "$root")
+
+  while IFS= read -r b; do
+    [[ $b != "$def" && -z $(worktree_for_branch "$root" "$b") ]] || continue
+    tip=$(git -C "$root" rev-parse --verify --quiet "refs/heads/$b") || continue
+    pr=$(merged_pr_for "$root" "$b" "$tip") || continue
+    did=1
+    if ((dry)); then log "$name: would delete branch $b (merged in #$pr)"; else cleanup_branch "$root" "$b"; fi
+  done < <(git -C "$root" for-each-ref --format='%(refname:short)' refs/heads)
+
+  if ((!dry)); then git -C "$root" worktree prune; ff_main "$root"; fi
+  return "$((1 - did))"
+}
+
+cmd_sweep() {
+  local dry=0 repo any=0
+  case ${1:-} in -n | --dry-run) dry=1 ;; "") ;; *) die "usage: git wt sweep [--dry-run]" ;; esac
+  for repo in "$PROJECTS_ROOT"/*/; do
+    repo="${repo%/}"
+    [[ -d $repo/.git ]] || continue
+    if sweep_repo "$repo" "$dry"; then any=1; fi
+  done
+  if ((!dry)) && [[ -d $WT_ROOT ]]; then find "$WT_ROOT" -mindepth 1 -type d -empty -delete 2>/dev/null || true; fi
+  ((any)) || log "nothing to clean up"
+  return 0
+}
+
+cmd_ls() {
+  local repo root wt b prs state
+  for repo in "$PROJECTS_ROOT"/*/; do
+    root="${repo%/}"
+    [[ -d $root/.git ]] || continue
+    prs='[]'
+    if has_origin "$root" && have gh; then
+      prs=$(cd "$root" && gh pr list --state all --limit 100 --json headRefName,state,isDraft,number,title 2>/dev/null || echo '[]')
+    fi
+    while IFS=$'\t' read -r wt b; do
+      [[ $(norm "$wt") != "$(norm "$root")" ]] || continue
+      state=$(jq -r --arg b "$b" 'map(select(.headRefName == $b)) | first // empty
+        | "#\(.number) \(if .isDraft then "DRAFT" else .state end)  \(.title)"' <<<"$prs")
+      printf '%-24s %-36s %s\n' "$(basename "$root")" "${b:-(detached)}" "${state:-no PR}"
+    done < <(list_worktrees "$root")
+  done
+}
+
+put_file() { # <template> <dest> [default-branch]
+  if [[ -e $2 ]]; then log "exists, left alone: $2"; return 0; fi
+  mkdir -p "$(dirname "$2")"
+  sed "s/__DEFAULT_BRANCH__/${3:-main}/g" "$1" >"$2"
+  log "added $2"
+}
+
+cmd_setup() {
+  local releases="" github=1 top root def
+  while (($#)); do
+    case $1 in
+      --releases) releases="${2:?--releases needs a type}"; shift 2 ;;
+      --no-github) github=0; shift ;;
+      *) die "usage: git wt setup [--releases <node|python|rust|go|simple>] [--no-github]" ;;
+    esac
+  done
+  top=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a git repository"
+  top=$(posix "$top"); root=$(main_root "$top"); def=$(default_branch "$root")
+
+  if ((github)); then
+    # shellcheck disable=SC2015 # die when either check fails
+    has_origin "$root" && have gh || die "needs a GitHub 'origin' remote and gh (or pass --no-github)"
+    (cd "$top" && gh repo edit --enable-squash-merge --enable-merge-commit=false --enable-rebase-merge=false \
+      --delete-branch-on-merge >&2)
+    (cd "$top" && gh api -X PATCH 'repos/{owner}/{repo}' -f squash_merge_commit_title=PR_TITLE \
+      -f squash_merge_commit_message=PR_BODY >/dev/null)
+    log "GitHub: squash merge only (commit = PR title + description), branches deleted on merge"
+    if [[ -n $releases ]]; then
+      local perms
+      perms=$(cd "$top" && gh api 'repos/{owner}/{repo}/actions/permissions/workflow' -q .default_workflow_permissions)
+      (cd "$top" && gh api -X PUT 'repos/{owner}/{repo}/actions/permissions/workflow' \
+        -f default_workflow_permissions="$perms" -F can_approve_pull_request_reviews=true >/dev/null)
+      log "GitHub: Actions may open pull requests (needed by release-please)"
+    fi
+  fi
+
+  if [[ $(norm "$top") == "$(norm "$root")" ]]; then
+    log "repo files not added: run this inside a worktree (git wt new chore/repo-setup)"; return 0
+  fi
+  put_file "$TEMPLATES/pr-title.yml" "$top/.github/workflows/pr-title.yml"
+  put_file "$TEMPLATES/pull_request_template.md" "$top/.github/pull_request_template.md"
+  if [[ ! -e $top/.worktreeinclude ]]; then
+    local files; files=$(matching_ignored "$root" defaults)
+    if [[ -n $files ]]; then
+      { sed -n '1,4p' "$TEMPLATES/worktreeinclude"; printf '%s\n' "$files"; } >"$top/.worktreeinclude"
+      log "added $top/.worktreeinclude: $(tr '\n' ' ' <<<"$files")"
+    fi
+  fi
+  [[ -z $releases ]] || setup_releases "$top" "$def" "$releases"
+  log "done: review the new files, commit them, and ship the PR"
+}
+
+setup_releases() {
+  local top="$1" def="$2" type="$3" version="" sha
+  case $type in node | python | rust | go | simple) ;; *) die "--releases takes node, python, rust, go or simple" ;; esac
+  case $type in
+    node) [[ -f $top/package.json ]] && version=$(jq -r '.version // empty' "$top/package.json") ;;
+    python) [[ -f $top/pyproject.toml ]] && version=$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$top/pyproject.toml" | head -1) ;;
+    rust) [[ -f $top/Cargo.toml ]] && version=$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "$top/Cargo.toml" | head -1) ;;
+    simple) [[ -f $top/version.txt ]] && version=$(tr -d '[:space:]' <"$top/version.txt") ;;
+  esac
+  version="${version:-0.0.0}"
+  sha=$(git -C "$top" rev-parse "origin/$def" 2>/dev/null || git -C "$top" rev-parse "$def")
+  put_file "$TEMPLATES/release-please.yml" "$top/.github/workflows/release-please.yml" "$def"
+  if [[ ! -e $top/release-please-config.json ]]; then
+    jq -n --arg t "$type" --arg sha "$sha" '{
+      "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+      "bootstrap-sha": $sha,
+      "include-component-in-tag": false,
+      "packages": { ".": { "release-type": $t, "bump-minor-pre-major": true, "changelog-path": "CHANGELOG.md" } }
+    }' >"$top/release-please-config.json"
+    log "added release-please-config.json (release-type $type, history starts after ${sha:0:7})"
+  fi
+  if [[ ! -e $top/.release-please-manifest.json ]]; then
+    jq -n --arg v "$version" '{".": $v}' >"$top/.release-please-manifest.json"
+    log "added .release-please-manifest.json (current version $version)"
+  fi
+  if [[ $type == simple && ! -e $top/version.txt ]]; then printf '%s\n' "$version" >"$top/version.txt"; log "added version.txt"; fi
+  if [[ $type == node && -f $top/package.json && -z $(jq -r '.version // empty' "$top/package.json") ]]; then
+    log "warning: package.json has no \"version\" field; add \"version\": \"$version\" so release-please can bump it"
+  fi
+  if [[ $type == python && -f $top/uv.lock ]]; then
+    log "warning: uv.lock also records the project version; check after the first release that 'uv lock --check' still passes"
+  fi
+  return 0
+}
+
+# ── Claude Code hooks ──────────────────────────────────────────────────────
+cmd_hook_create() {
+  need jq
+  local input name cwd
+  input=$(cat)
+  name=$(jq -r '.name // empty' <<<"$input")
+  cwd=$(jq -r '.cwd // empty' <<<"$input")
+  [[ -n $name ]] || die "WorktreeCreate: hook input has no name"
+  [[ -n $cwd ]] && cwd=$(posix "$cwd") && cd "$cwd"
+  git rev-parse --git-dir >/dev/null 2>&1 ||
+    die "not in a git repository ($PWD); run: git -C ~/Projects/<project> wt new <type>/<name>"
+  if [[ $name =~ $BRANCH_RE ]]; then cmd_new "$name"; else cmd_new "$name" --scratch; fi
+}
+
+cmd_hook_remove() {
+  need jq
+  local input wt
+  input=$(cat)
+  wt=$(jq -r '.worktree_path // empty' <<<"$input")
+  [[ -n $wt ]] || die "WorktreeRemove: hook input has no worktree_path"
+  cmd_rm "$(posix "$wt")" --from-hook
+}
+
+deny() {
+  jq -cn --arg r "$1" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'
+  exit 0
+}
+
+guess_dir() { # directory a shell command will run git in: git -C <dir>, else the first cd <dir>, else cwd
+  local cmd="$1" cwd="$2" d=""
+  local q="'"
+  local re_c="git[[:space:]]+-C[[:space:]]+(\"[^\"]+\"|${q}[^${q}]+${q}|[^[:space:];&|]+)"
+  local re_cd="(^|[;&|(][[:space:]]*)cd[[:space:]]+(\"[^\"]+\"|${q}[^${q}]+${q}|[^[:space:];&|)]+)"
+  if [[ $cmd =~ $re_c ]]; then d="${BASH_REMATCH[1]}"
+  elif [[ $cmd =~ $re_cd ]]; then d="${BASH_REMATCH[2]}"; fi
+  d="${d#[\"\']}"; d="${d%[\"\']}"
+  if [[ $d == "~"* ]]; then d="$HOME${d#\~}"; fi
+  if [[ -n $d && $d != /* && ! $d =~ ^[A-Za-z]: ]]; then d="$cwd/$d"; fi
+  if [[ -n $d && -d $d ]]; then printf '%s\n' "$d"; else printf '%s\n' "$cwd"; fi
+}
+
+commit_subject() { # first line of the message in a `git commit` command, if it can be read
+  local c="${1#*commit}" rest q="'"
+  local re_hd='-[a-zA-Z]*m[[:space:]]*"\$\(cat[[:space:]]*<<'
+  local re_dq='(-[a-zA-Z]*m|--message)[[:space:]=]*"([^"]*)"'
+  local re_sq="(-[a-zA-Z]*m|--message)[[:space:]=]*${q}([^${q}]*)${q}"
+  if [[ $c =~ $re_hd ]]; then
+    rest="${c#*$'\n'}"; rest="${rest%%$'\n'*}"
+  elif [[ $c =~ $re_dq || $c =~ $re_sq ]]; then
+    rest="${BASH_REMATCH[2]}"; rest="${rest%%$'\n'*}"
+  else
+    return 1
+  fi
+  rest="${rest#"${rest%%[![:space:]]*}"}"
+  printf '%s\n' "$rest"
+}
+
+pr_title_arg() {
+  local q="'"
+  local re_dq='(--title|-t)[[:space:]=]+"([^"]*)"' re_sq="(--title|-t)[[:space:]=]+${q}([^${q}]*)${q}"
+  if [[ $1 =~ $re_dq || $1 =~ $re_sq ]]; then printf '%s\n' "${BASH_REMATCH[2]}"; return 0; fi
+  return 1
+}
+
+header_problem() { # why a commit/PR header is invalid; empty when fine
+  local h="$1"
+  if [[ $h =~ ^(fixup!|squash!|amend!|Merge\ |Revert\ \") ]]; then return 0; fi
+  if ! [[ $h =~ $HEADER_RE ]]; then
+    printf '%s' "'$h' is not a Conventional Commit header. Use <type>(<optional scope>): <subject>, lowercase subject in imperative mood, types: ${COMMIT_TYPES//|/, }. Breaking changes: add ! before the colon and a BREAKING CHANGE: footer."
+  elif ((${#h} > 100)); then
+    printf '%s' "Header is ${#h} characters; keep it under 72 (100 at most) and move detail into the body."
+  fi
+}
+
+cmd_guard() {
+  have jq || exit 0
+  local input cmd cwd dir in_repo=0 conventions=1 branch def subj title problem
+  input=$(cat)
+  cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
+  cwd=$(jq -r '.cwd // empty' <<<"$input")
+  [[ -n $cmd ]] || exit 0
+  [[ -n $cwd ]] && cwd=$(posix "$cwd")
+  dir=$(guess_dir "$cmd" "${cwd:-$PWD}")
+  if git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    in_repo=1
+    [[ $(git -C "$dir" config --get workflow.conventions 2>/dev/null || true) != false ]] || conventions=0
+  fi
+
+  local re_git='git([[:space:]]+-[cC][[:space:]]+[^[:space:]]+)*[[:space:]]+'
+  local re_commit="${re_git}commit([[:space:]]|\$)"
+  local re_push="${re_git}push([[:space:]]|\$)"
+  local re_gh='gh[[:space:]]+pr[[:space:]]+'
+  local re_coauthor=$'(^|\n)[[:space:]]*co-authored-by:[^\n]*(claude|anthropic)'
+  local re_generated='generated with \[?claude code'
+
+  if [[ ${cmd,,} =~ $re_coauthor || ${cmd,,} =~ $re_generated ]]; then
+    deny "Remove the Claude attribution (Co-Authored-By / 'Generated with Claude Code'): commits and PRs carry no Claude attribution here."
+  fi
+  if [[ $cmd =~ $re_commit || $cmd =~ $re_push ]] && [[ $cmd =~ (^|[[:space:]])--no-verify([[:space:]]|$) ]]; then
+    deny "Don't bypass git hooks with --no-verify. Fix whatever the hook reports instead."
+  fi
+
+  if [[ $cmd =~ $re_push ]]; then
+    local nl=$'\n' seg
+    seg="${cmd#*push}"
+    # shellcheck disable=SC2295 # $nl belongs in the bracket expression
+    seg=" ${seg%%[;&|$nl]*} "   # just the arguments of the push itself
+    if [[ $seg =~ [[:space:]](--force|-f)[[:space:]] || $seg =~ [[:space:]]\+[A-Za-z] ]]; then
+      deny "Plain force-push is blocked. Use --force-with-lease, and only on your own feature branch."
+    fi
+    if ((in_repo)); then
+      def=$(default_branch "$dir" quick); branch=$(current_branch "$dir")
+      if [[ $seg =~ [[:space:]:](refs/heads/)?(main|master|$def)[[:space:]] ]] && ! [[ $seg =~ [[:space:]](--delete|-d)[[:space:]] ]]; then
+        deny "Never push to the default branch. Push the feature branch and merge through its PR (git wt merge)."
+      fi
+      if [[ $branch == "$def" ]] && ! [[ $seg =~ [[:space:]](--delete|-d|--tags)[[:space:]] ]]; then
+        deny "This checkout is on $def. Work happens in a worktree: git wt new <type>/<name>."
+      fi
+      if have gitleaks && git -C "$dir" rev-parse --verify --quiet "refs/remotes/origin/$def" >/dev/null; then
+        local leaks rc=0
+        leaks=$(gitleaks git "$dir" --log-opts="origin/$def..HEAD" --redact --no-banner -v --exit-code 3 2>&1) || rc=$?
+        if ((rc == 3)); then
+          # shellcheck disable=SC2001 # sed strips the color codes; ${//} can't express that
+          deny "gitleaks found possible secrets in the commits about to be pushed. Remove them from those commits before pushing:
+$(sed 's/\x1b\[[0-9;]*m//g' <<<"$leaks" | grep -E '^(Finding|RuleID|File|Line|Commit):' | head -24)"
+        fi
+      fi
+    fi
+  fi
+
+  if [[ $cmd =~ $re_commit ]] && ((in_repo)) && has_origin "$dir"; then
+    def=$(default_branch "$dir" quick); branch=$(current_branch "$dir")
+    if [[ $branch == "$def" || $branch == main || $branch == master ]]; then
+      deny "Don't commit on $branch. Start a worktree first: git wt new <type>/<name> (or EnterWorktree with that name)."
+    fi
+  fi
+
+  if [[ $cmd =~ ${re_gh}merge([[:space:]]|$) ]] && ! [[ $cmd =~ (^|[[:space:]])(--squash|-s)([[:space:]]|$) ]]; then
+    deny "PRs are squash-merged only: use git wt merge (or gh pr merge --squash)."
+  fi
+
+  ((conventions)) || exit 0
+
+  if [[ $cmd =~ $re_commit ]] && subj=$(commit_subject "$cmd"); then
+    problem=$(header_problem "$subj")
+    [[ -z $problem ]] || deny "Commit message: $problem"
+  fi
+  if [[ $cmd =~ ${re_gh}create([[:space:]]|$) ]]; then
+    title=$(pr_title_arg "$cmd" || true)
+    if ! [[ $cmd =~ (^|[[:space:]])(--draft|-d)([[:space:]]|$) || $title == "$WIP_PREFIX"* ]]; then
+      deny "PRs start as drafts: gh pr create --draft (git wt new and git wt pr already open one). Mark it ready with gh pr ready when shipping."
+    fi
+  fi
+  if [[ $cmd =~ ${re_gh}(create|edit)([[:space:]]|$) ]] && title=$(pr_title_arg "$cmd"); then
+    title="${title#"$WIP_PREFIX"}"
+    problem=$(header_problem "$title")
+    [[ -z $problem ]] || deny "PR title (it becomes the squash commit on the default branch): $problem"
+  fi
+  exit 0
+}
+
+case "${1:-help}" in
+  new) shift; cmd_new "$@" ;;
+  pr) shift; cmd_pr "$@" ;;
+  merge) shift; cmd_merge "$@" ;;
+  rm | remove) shift; cmd_rm "$@" ;;
+  sweep | clean) shift; cmd_sweep "$@" ;;
+  ls | list) shift; cmd_ls "$@" ;;
+  setup) shift; cmd_setup "$@" ;;
+  hook-create) cmd_hook_create ;;
+  hook-remove) cmd_hook_remove ;;
+  guard) cmd_guard ;;
+  help | -h | --help) usage ;;
+  *) die "unknown command: $1 (see: git wt help)" ;;
+esac
