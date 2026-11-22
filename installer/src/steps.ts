@@ -364,6 +364,24 @@ export function loginShellStep(): Step {
   };
 }
 
+/** The git-wt post-create command that installs the dev dependencies (and with them the hooks) in new worktrees of this repo. */
+export const WORKTREE_SETUP = "cd installer && bun install --frozen-lockfile --silent";
+
+export function repoDevSetupStep(): Step {
+  return {
+    id: "repo-dev-setup",
+    title: "Hooks in new worktrees of this repo",
+    detail: [`git config wt.postCreate "${WORKTREE_SETUP}"`],
+    async run(ctx) {
+      if (!existsSync(join(ctx.repo, ".git"))) return { status: "skipped", note: "not a git checkout" };
+      const current = await ctx.sh.run(["git", "-C", ctx.repo, "config", "--get-all", "wt.postCreate"], { allowFail: true });
+      if (current.stdout.split("\n").includes(WORKTREE_SETUP)) return { status: "skipped", note: "already set" };
+      await ctx.sh.run(["git", "-C", ctx.repo, "config", "--add", "wt.postCreate", WORKTREE_SETUP]);
+      return { status: "done" };
+    },
+  };
+}
+
 export function paruStep(): Step {
   return {
     id: "paru",

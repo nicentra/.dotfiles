@@ -16,6 +16,7 @@ import {
   pnpmGlobalsStep,
   pnpmStep,
   pythonStep,
+  repoDevSetupStep,
   systemPackagesStep,
   uvStep,
   uvToolsStep,
@@ -100,5 +101,6 @@ export async function buildPlan(ctx: Ctx): Promise<Plan> {
 
   if (a.shell.zsh && a.shell.loginShell && ctx.platform.os === "linux") steps.push(loginShellStep());
   if (a.extras.paru && ctx.platform.family === "arch") steps.push(paruStep());
+  steps.push(repoDevSetupStep());
   return { steps, notes };
 }

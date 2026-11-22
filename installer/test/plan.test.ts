@@ -20,6 +20,7 @@ describe("plan", () => {
       "bun",
       "login-shell",
       "paru",
+      "repo-dev-setup",
     ]);
   });
 
@@ -60,6 +61,7 @@ describe("plan", () => {
       "oh-my-zsh",
       "git-identity",
       "login-shell",
+      "repo-dev-setup",
     ]);
   });
 
