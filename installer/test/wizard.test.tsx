@@ -148,3 +148,22 @@ describe("agent screens", () => {
     expect((w.result() as Answers).agents.harnesses).toEqual(["claude"]);
   });
 });
+
+describe("Windows screens", () => {
+  test("only under WSL", async () => {
+    const { platformFromOsRelease } = await import("../src/platform.ts");
+    const { OS_RELEASE } = await import("./helpers.ts");
+    for (const [isWsl, expected] of [
+      [false, false],
+      [true, true],
+    ] as const) {
+      const w = start({ platform: platformFromOsRelease(OS_RELEASE.arch, "x64", isWsl) });
+      const seen: string[] = [];
+      for (let i = 0; i < 30 && !w.ui.lastFrame()?.includes("Install now?"); i++) {
+        seen.push(w.ui.lastFrame() ?? "");
+        await w.press(ENTER);
+      }
+      expect(seen.join("\n").includes("Windows apps (winget)")).toBe(expected);
+    }
+  });
+});
