@@ -59,9 +59,27 @@ export interface Answers {
 export const OMZ_PLUGINS = ["zsh-users/zsh-autosuggestions", "zsh-users/zsh-syntax-highlighting"];
 
 export const WORKSTATION_TOOLS = [
-  "curl", "wget", "unzip", "rsync", "tree", "jq", "yq", "bat", "fzf", "zoxide", "chafa",
-  "gh", "delta", "lazygit", "gitleaks", "ghq",
-  "btop", "htop", "fastfetch", "felix", "xdg-utils",
+  "curl",
+  "wget",
+  "unzip",
+  "rsync",
+  "tree",
+  "jq",
+  "yq",
+  "bat",
+  "fzf",
+  "zoxide",
+  "chafa",
+  "gh",
+  "delta",
+  "lazygit",
+  "gitleaks",
+  "ghq",
+  "btop",
+  "htop",
+  "fastfetch",
+  "felix",
+  "xdg-utils",
 ];
 
 export const SERVER_TOOLS = ["curl", "unzip", "rsync", "tree", "jq", "bat", "fzf", "zoxide", "delta", "htop"];

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TOOLS, parseVersion, resolveMethod, tool } from "../src/manifest.ts";
+import { parseVersion, resolveMethod, TOOLS, tool } from "../src/manifest.ts";
 import { platform, probe } from "./helpers.ts";
 
 describe("manifest", () => {

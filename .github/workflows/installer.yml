@@ -1,5 +1,5 @@
-# Unit tests for the installer, and a full install from bootstrap.sh in a
-# fresh container per target distro (tests/install-e2e.sh).
+# A full install from bootstrap.sh in a fresh container per target distro
+# (tests/install-e2e.sh). The unit tests run in the Lint workflow.
 name: Installer
 
 on:
@@ -11,20 +11,6 @@ permissions:
   contents: read
 
 jobs:
-  unit:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: installer
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.5
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun test
-
   e2e:
     name: e2e ${{ matrix.image }} (${{ matrix.answers }})
     runs-on: ubuntu-latest

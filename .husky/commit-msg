@@ -1,0 +1,16 @@
+# Conventional Commit header, the same shape the PR title check wants:
+# type(scope)!: subject, lowercase, no trailing period, at most 72 characters.
+header=$(head -n1 "$1")
+case $header in
+  "Merge "* | "Revert "* | "fixup! "* | "squash! "* | "amend! "*) exit 0 ;;
+esac
+types='feat|fix|perf|refactor|docs|test|build|ci|chore|style|revert'
+if ! printf '%s\n' "$header" | grep -qE "^($types)(\([a-z0-9._/-]+\))?!?: [a-z0-9].*[^. ]$"; then
+  printf 'commit-msg: "%s"\n' "$header" >&2
+  printf '  needs a Conventional Commit header: type(scope): subject\n  types: %s; lowercase subject, no trailing period\n' "$types" | sed 's/|/, /g' >&2
+  exit 1
+fi
+if [ "${#header}" -gt 72 ]; then
+  printf 'commit-msg: the header is %s characters; keep it at 72 or fewer\n' "${#header}" >&2
+  exit 1
+fi

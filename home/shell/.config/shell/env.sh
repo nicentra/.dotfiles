@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # PATH and tool environment for every shell: zsh (via ~/.zshenv), bash and
 # sh login shells (via ~/.bashrc and ~/.profile). POSIX sh, prints nothing,
 # runs no external commands, and is safe to source more than once.

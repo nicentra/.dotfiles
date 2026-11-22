@@ -24,11 +24,11 @@ export const SUPPORTED = ["arch", "debian 13", "ubuntu 24.04", "ubuntu 26.04", "
 export function parseOsRelease(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const line of text.split("\n")) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (!m) continue;
-    let value = m[2]!.trim();
+    const [, key, raw] = line.match(/^([A-Z_]+)=(.*)$/) ?? [];
+    if (!key || raw === undefined) continue;
+    let value = raw.trim();
     if (/^(["']).*\1$/.test(value)) value = value.slice(1, -1);
-    out[m[1]!] = value;
+    out[key] = value;
   }
   return out;
 }

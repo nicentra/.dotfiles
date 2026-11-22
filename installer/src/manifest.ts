@@ -57,48 +57,103 @@ export const TOOLS: Tool[] = [
   { id: "jq", name: "jq", group: "core", description: "JSON processor", bin: "jq", methods: native("jq") },
   { id: "yq", name: "yq", group: "core", description: "jq for YAML, XML and TOML", bin: "yq", methods: native("yq") },
   {
-    id: "bat", name: "bat", group: "core", description: "cat with syntax highlighting", bin: "bat",
+    id: "bat",
+    name: "bat",
+    group: "core",
+    description: "cat with syntax highlighting",
+    bin: "bat",
     methods: native("bat", "bat", { aptLinks: { bat: "batcat" } }),
   },
   {
-    id: "fzf", name: "fzf", group: "core", description: "Fuzzy finder (Ctrl-R, Ctrl-T)", bin: "fzf",
+    id: "fzf",
+    name: "fzf",
+    group: "core",
+    description: "Fuzzy finder (Ctrl-R, Ctrl-T)",
+    bin: "fzf",
     minVersion: { args: ["--version"], min: "0.48" }, // `fzf --zsh`
     methods: [
       ...native("fzf", "fzf", { min: "0.48" }),
-      { kind: "github", repo: "junegunn/fzf", asset: "fzf-{version}-linux_{arch}.tar.gz", arch: { x64: "amd64", arm64: "arm64" }, bins: { fzf: "fzf" } },
+      {
+        kind: "github",
+        repo: "junegunn/fzf",
+        asset: "fzf-{version}-linux_{arch}.tar.gz",
+        arch: { x64: "amd64", arm64: "arm64" },
+        bins: { fzf: "fzf" },
+      },
     ],
   },
   { id: "zoxide", name: "zoxide", group: "core", description: "Smarter cd (z)", bin: "zoxide", methods: native("zoxide") },
   { id: "ripgrep", name: "ripgrep", group: "core", description: "Fast grep (rg)", bin: "rg", methods: native("ripgrep") },
   {
-    id: "fd", name: "fd", group: "core", description: "Fast find", bin: "fd",
+    id: "fd",
+    name: "fd",
+    group: "core",
+    description: "Fast find",
+    bin: "fd",
     methods: native("fd", "fd-find", { aptLinks: { fd: "fdfind" } }),
   },
   { id: "chafa", name: "chafa", group: "core", description: "Images in the terminal", bin: "chafa", methods: native("chafa") },
 
   // git
   { id: "gh", name: "GitHub CLI", group: "git", description: "gh", bin: "gh", methods: native("github-cli", "gh") },
-  { id: "delta", name: "delta", group: "git", description: "Pager for git diffs (used by .gitconfig)", bin: "delta", methods: native("git-delta") },
   {
-    id: "lazygit", name: "lazygit", group: "git", description: "Git TUI", bin: "lazygit",
+    id: "delta",
+    name: "delta",
+    group: "git",
+    description: "Pager for git diffs (used by .gitconfig)",
+    bin: "delta",
+    methods: native("git-delta"),
+  },
+  {
+    id: "lazygit",
+    name: "lazygit",
+    group: "git",
+    description: "Git TUI",
+    bin: "lazygit",
     methods: [
       ...native("lazygit"),
-      { kind: "github", repo: "jesseduffield/lazygit", asset: "lazygit_{version}_linux_{arch}.tar.gz", arch: { x64: "x86_64", arm64: "arm64" }, bins: { lazygit: "lazygit" } },
+      {
+        kind: "github",
+        repo: "jesseduffield/lazygit",
+        asset: "lazygit_{version}_linux_{arch}.tar.gz",
+        arch: { x64: "x86_64", arm64: "arm64" },
+        bins: { lazygit: "lazygit" },
+      },
     ],
   },
   {
-    id: "gitleaks", name: "gitleaks", group: "git", description: "Secret scanner (used by the git-wt guard)", bin: "gitleaks",
+    id: "gitleaks",
+    name: "gitleaks",
+    group: "git",
+    description: "Secret scanner (used by the git-wt guard)",
+    bin: "gitleaks",
     minVersion: { args: ["version"], min: "8.19" }, // `gitleaks git`
     methods: [
       { kind: "pacman", pkgs: ["gitleaks"] },
-      { kind: "github", repo: "gitleaks/gitleaks", asset: "gitleaks_{version}_linux_{arch}.tar.gz", arch: { x64: "x64", arm64: "arm64" }, bins: { gitleaks: "gitleaks" } },
+      {
+        kind: "github",
+        repo: "gitleaks/gitleaks",
+        asset: "gitleaks_{version}_linux_{arch}.tar.gz",
+        arch: { x64: "x64", arm64: "arm64" },
+        bins: { gitleaks: "gitleaks" },
+      },
     ],
   },
   {
-    id: "ghq", name: "ghq", group: "git", description: "Clone repos into a tidy tree", bin: "ghq",
+    id: "ghq",
+    name: "ghq",
+    group: "git",
+    description: "Clone repos into a tidy tree",
+    bin: "ghq",
     methods: [
       { kind: "pacman", pkgs: ["ghq"] },
-      { kind: "github", repo: "x-motemen/ghq", asset: "ghq_linux_{arch}.zip", arch: { x64: "amd64", arm64: "arm64" }, bins: { ghq: "ghq_linux_{arch}/ghq" } },
+      {
+        kind: "github",
+        repo: "x-motemen/ghq",
+        asset: "ghq_linux_{arch}.zip",
+        arch: { x64: "amd64", arm64: "arm64" },
+        bins: { ghq: "ghq_linux_{arch}/ghq" },
+      },
     ],
   },
 
@@ -106,50 +161,98 @@ export const TOOLS: Tool[] = [
   { id: "btop", name: "btop", group: "system", description: "Resource monitor", bin: "btop", methods: native("btop") },
   { id: "htop", name: "htop", group: "system", description: "Process viewer", bin: "htop", methods: native("htop") },
   {
-    id: "fastfetch", name: "fastfetch", group: "system", description: "System info, shown when a terminal opens", bin: "fastfetch",
+    id: "fastfetch",
+    name: "fastfetch",
+    group: "system",
+    description: "System info, shown when a terminal opens",
+    bin: "fastfetch",
     methods: [
       ...native("fastfetch"),
       {
-        kind: "github", repo: "fastfetch-cli/fastfetch", asset: "fastfetch-linux-{arch}.tar.gz", arch: { x64: "amd64", arm64: "aarch64" },
-        dir: "fastfetch-linux-{arch}", bins: { fastfetch: "usr/bin/fastfetch" },
+        kind: "github",
+        repo: "fastfetch-cli/fastfetch",
+        asset: "fastfetch-linux-{arch}.tar.gz",
+        arch: { x64: "amd64", arm64: "aarch64" },
+        dir: "fastfetch-linux-{arch}",
+        bins: { fastfetch: "usr/bin/fastfetch" },
       },
     ],
   },
   {
-    id: "felix", name: "felix", group: "system", description: "File manager (fx). Arch only: no Linux binaries upstream", bin: "fx",
+    id: "felix",
+    name: "felix",
+    group: "system",
+    description: "File manager (fx). Arch only: no Linux binaries upstream",
+    bin: "fx",
     methods: [{ kind: "pacman", pkgs: ["felix-rs"], links: { fx: "felix" } }],
   },
   { id: "xdg-utils", name: "xdg-utils", group: "system", description: "xdg-open", bin: "xdg-open", methods: native("xdg-utils") },
-  { id: "reflector", name: "reflector", group: "system", description: "Arch mirror list ranking", bin: "reflector", methods: [{ kind: "pacman", pkgs: ["reflector"] }] },
-  { id: "ex-vi-compat", name: "ex-vi-compat", group: "editor", description: "vi and ex commands via vim (Arch)", bin: "vi", methods: [{ kind: "pacman", pkgs: ["ex-vi-compat"] }] },
+  {
+    id: "reflector",
+    name: "reflector",
+    group: "system",
+    description: "Arch mirror list ranking",
+    bin: "reflector",
+    methods: [{ kind: "pacman", pkgs: ["reflector"] }],
+  },
+  {
+    id: "ex-vi-compat",
+    name: "ex-vi-compat",
+    group: "editor",
+    description: "vi and ex commands via vim (Arch)",
+    bin: "vi",
+    methods: [{ kind: "pacman", pkgs: ["ex-vi-compat"] }],
+  },
 
   // editors and shell
   { id: "vim", name: "vim", group: "editor", description: "Vim", bin: "vim", methods: native("vim") },
   {
-    id: "neovim", name: "neovim", group: "editor", description: "Neovim", bin: "nvim",
+    id: "neovim",
+    name: "neovim",
+    group: "editor",
+    description: "Neovim",
+    bin: "nvim",
     minVersion: { args: ["--version"], min: "0.10" },
     methods: [
       ...native("neovim", "neovim", { min: "0.10" }),
       {
-        kind: "github", repo: "neovim/neovim", asset: "nvim-linux-{arch}.tar.gz", arch: { x64: "x86_64", arm64: "arm64" },
-        dir: "nvim-linux-{arch}", bins: { nvim: "bin/nvim" },
+        kind: "github",
+        repo: "neovim/neovim",
+        asset: "nvim-linux-{arch}.tar.gz",
+        arch: { x64: "x86_64", arm64: "arm64" },
+        dir: "nvim-linux-{arch}",
+        bins: { nvim: "bin/nvim" },
       },
     ],
   },
   { id: "zsh", name: "zsh", group: "shell", description: "Z shell", bin: "zsh", methods: native("zsh") },
   { id: "stow", name: "GNU stow", group: "shell", description: "Links the dotfiles", bin: "stow", methods: native("stow") },
   {
-    id: "starship", name: "starship", group: "shell", description: "Prompt", bin: "starship",
+    id: "starship",
+    name: "starship",
+    group: "shell",
+    description: "Prompt",
+    bin: "starship",
     methods: [
       ...native("starship"),
-      { kind: "github", repo: "starship/starship", asset: "starship-{arch}-unknown-linux-musl.tar.gz", arch: { x64: "x86_64", arm64: "aarch64" }, bins: { starship: "starship" } },
+      {
+        kind: "github",
+        repo: "starship/starship",
+        asset: "starship-{arch}-unknown-linux-musl.tar.gz",
+        arch: { x64: "x86_64", arm64: "aarch64" },
+        bins: { starship: "starship" },
+      },
     ],
   },
 
   // extras
   {
-    id: "nvidia-container-toolkit", name: "NVIDIA Container Toolkit", group: "extra", description: "GPUs in Docker containers (Arch)",
-    bin: "nvidia-ctk", methods: [{ kind: "pacman", pkgs: ["nvidia-container-toolkit"] }],
+    id: "nvidia-container-toolkit",
+    name: "NVIDIA Container Toolkit",
+    group: "extra",
+    description: "GPUs in Docker containers (Arch)",
+    bin: "nvidia-ctk",
+    methods: [{ kind: "pacman", pkgs: ["nvidia-container-toolkit"] }],
   },
 ];
 
@@ -185,7 +288,8 @@ export async function resolveMethod(t: Tool, platform: Platform, probe: Probe): 
   for (const m of t.methods) {
     if (!methodApplies(m, platform.family)) continue;
     if (m.kind === "apt") {
-      const candidate = await probe.aptCandidate(m.pkgs[0]!);
+      const [pkg] = m.pkgs;
+      const candidate = pkg && (await probe.aptCandidate(pkg));
       if (!candidate) continue;
       if (m.min && compareVersions(candidate, m.min) < 0) continue;
     }

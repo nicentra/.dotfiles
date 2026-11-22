@@ -18,7 +18,9 @@ describe("os-release", () => {
   });
 
   test("rejects other distros", () => {
-    expect(() => platformFromOsRelease('ID=fedora\nPRETTY_NAME="Fedora Linux 43"\n', "x64", false)).toThrow(/Unsupported Linux distribution "Fedora Linux 43"/);
+    expect(() => platformFromOsRelease('ID=fedora\nPRETTY_NAME="Fedora Linux 43"\n', "x64", false)).toThrow(
+      /Unsupported Linux distribution "Fedora Linux 43"/,
+    );
   });
 });
 

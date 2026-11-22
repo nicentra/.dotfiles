@@ -7,6 +7,7 @@
 #
 # minimal: only stow, zsh, git and vim, as before the installer has run.
 # full:    also the tools the configs integrate with, and oh-my-zsh (Arch only).
+# shellcheck disable=SC2088,SC2015 # "~/x" in messages is display text; pass never fails
 set -eu
 mode=${1:-minimal}
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -34,7 +35,7 @@ fi
 packages=$(cd "$repo/home" && find . -mindepth 1 -maxdepth 1 -type d | sed 's|^\./||' | sort)
 # shellcheck disable=SC2086 # one word per package
 stow --dir="$repo/home" --target="$HOME" --no-folding $packages
-echo "linked: $(echo $packages)"
+echo "linked: $(printf '%s\n' "$packages" | tr '\n' ' ')"
 
 failed=0
 pass() { echo "ok    $1"; }
@@ -63,6 +64,7 @@ quiet "vim"                vim -u "$HOME/.vimrc" -Nes -c 'if v:errmsg != "" | cq
 # PATH: ~/.local/bin first, once, in every shell that reads env.sh.
 for sh in "zsh -c" "zsh -i -c" "bash -l -c" "sh -l -c"; do
   # shellcheck disable=SC2086 # split "zsh -c" into command and flag
+  # shellcheck disable=SC2016 # $PATH is for the inner shell
   p=$($sh 'echo "$PATH"' 2>/dev/null </dev/null)
   case $p in
     "$HOME/.local/bin:"*) ;;

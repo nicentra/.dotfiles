@@ -8,15 +8,32 @@ const ids = async (...args: Parameters<typeof fakeCtx>) => (await buildPlan(fake
 describe("plan", () => {
   test("workstation on a fresh Arch", async () => {
     expect(await ids(platform("arch"), presetAnswers("workstation"))).toEqual([
-      "system-packages", "link", "oh-my-zsh", "git-identity",
-      "pnpm", "node", "uv", "python", "uv-tools", "bun", "login-shell", "paru",
+      "system-packages",
+      "link",
+      "oh-my-zsh",
+      "git-identity",
+      "pnpm",
+      "node",
+      "uv",
+      "python",
+      "uv-tools",
+      "bun",
+      "login-shell",
+      "paru",
+      "repo-dev-setup",
     ]);
   });
 
   test("Ubuntu 24.04 adds GitHub releases for what apt lacks", async () => {
     const steps = await ids(platform("ubuntu2404"), presetAnswers("workstation"), { probe: probe("ubuntu2404") });
     expect(steps.filter((s) => s.startsWith("tool:"))).toEqual([
-      "tool:fzf", "tool:lazygit", "tool:gitleaks", "tool:ghq", "tool:fastfetch", "tool:neovim", "tool:starship",
+      "tool:fzf",
+      "tool:lazygit",
+      "tool:gitleaks",
+      "tool:ghq",
+      "tool:fastfetch",
+      "tool:neovim",
+      "tool:starship",
     ]);
     expect(steps).not.toContain("paru");
   });
@@ -28,7 +45,9 @@ describe("plan", () => {
 
   test("Node on Debian and Ubuntu brings libatomic1, unless it's installed", async () => {
     const pkgs = async (installed: string[]) => {
-      const plan = await buildPlan(fakeCtx(platform("ubuntu2404"), presetAnswers("workstation"), { probe: probe("ubuntu2404", installed) }));
+      const plan = await buildPlan(
+        fakeCtx(platform("ubuntu2404"), presetAnswers("workstation"), { probe: probe("ubuntu2404", installed) }),
+      );
       return plan.steps.find((s) => s.id === "system-packages")?.detail[0]?.split(" ") ?? [];
     };
     expect(await pkgs([])).toContain("libatomic1");
@@ -37,14 +56,21 @@ describe("plan", () => {
 
   test("server: no runtimes, no paru", async () => {
     expect(await ids(platform("arch"), presetAnswers("server"))).toEqual([
-      "system-packages", "link", "oh-my-zsh", "git-identity", "login-shell",
+      "system-packages",
+      "link",
+      "oh-my-zsh",
+      "git-identity",
+      "login-shell",
+      "repo-dev-setup",
     ]);
   });
 
   test("installed tools are left out of the package step", async () => {
-    const plan = await buildPlan(fakeCtx(platform("arch"), presetAnswers("server"), {
-      present: ["git", "curl", "unzip", "stow", "delta", "zsh", "starship", "vim", "rsync", "tree", "jq", "bat", "fzf", "zoxide", "htop"],
-    }));
+    const plan = await buildPlan(
+      fakeCtx(platform("arch"), presetAnswers("server"), {
+        present: ["git", "curl", "unzip", "stow", "delta", "zsh", "starship", "vim", "rsync", "tree", "jq", "bat", "fzf", "zoxide", "htop"],
+      }),
+    );
     expect(plan.steps.map((s) => s.id)).not.toContain("system-packages");
   });
 
