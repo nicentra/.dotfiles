@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   BLOCK_END,
@@ -36,15 +36,25 @@ describe("skills", () => {
 
   test("our skill is linked through the shared directory, and what was there is backed up", async () => {
     const ctx = fakeCtx(platform("arch"), presetAnswers("workstation"));
-    mkdirSync(join(ctx.home, ".config", "opencode", "skills", "git-workflow"), { recursive: true }); // a stale copy
-    const result = await ownSkillStep("git-workflow", [harness("codex"), harness("opencode")]).run(ctx);
+    mkdirSync(join(ctx.home, ".gemini", "config", "skills", "git-workflow"), { recursive: true }); // a stale copy
+    const result = await ownSkillStep("git-workflow", [harness("codex"), harness("antigravity")]).run(ctx);
     expect(result.status).toBe("done");
     const canonical = join(ctx.home, ".agents", "skills", "git-workflow");
     expect(resolve(readlinkSync(canonical))).toBe(join(ctx.repo, "agents", "skills", "git-workflow"));
-    expect(readlinkSync(join(ctx.home, ".config", "opencode", "skills", "git-workflow"))).toBe(canonical);
+    expect(readlinkSync(join(ctx.home, ".gemini", "config", "skills", "git-workflow"))).toBe(canonical);
     expect(lstatSync(join(ctx.home, ".local", "bin", "git-wt")).isSymbolicLink()).toBe(true);
-    expect(ctx.backup.moved).toEqual([".config/opencode/skills/git-workflow"]);
-    expect((await ownSkillStep("git-workflow", [harness("codex"), harness("opencode")]).run(ctx)).status).toBe("skipped");
+    expect(ctx.backup.moved).toEqual([".gemini/config/skills/git-workflow"]);
+    expect((await ownSkillStep("git-workflow", [harness("codex"), harness("antigravity")]).run(ctx)).status).toBe("skipped");
+  });
+
+  test("a link that ends at the same file is left alone", async () => {
+    const ctx = fakeCtx(platform("arch"), presetAnswers("workstation"));
+    await ownSkillStep("git-workflow", [harness("claude")]).run(ctx);
+    // what git-workflow's installer does: link git-wt through ~/.claude/skills instead
+    const gitWt = join(ctx.home, ".local", "bin", "git-wt");
+    rmSync(gitWt);
+    symlinkSync(join(ctx.home, ".claude", "skills", "git-workflow", "bin", "git-wt"), gitWt);
+    expect((await ownSkillStep("git-workflow", [harness("claude")]).run(ctx)).status).toBe("skipped");
   });
 });
 

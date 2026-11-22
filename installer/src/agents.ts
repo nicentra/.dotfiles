@@ -1,5 +1,16 @@
 // Agent harnesses (opt-in), their skills, global instructions and settings.
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { mergeDeep } from "./answers.ts";
 import type { Ctx, Step } from "./context.ts";
@@ -57,7 +68,8 @@ export const HARNESSES: Harness[] = [
     bin: "opencode",
     install: { url: "https://opencode.ai/install", shell: "bash", args: ["--no-modify-path"] },
     skillsAgent: "opencode",
-    skillsDir: ".config/opencode/skills",
+    // The skills CLI has opencode read the shared ~/.agents/skills globally.
+    skillsDir: ".agents/skills",
     instructions: ".config/opencode/AGENTS.md",
     signIn: "opencode auth login",
   },
@@ -96,9 +108,25 @@ function linkTarget(path: string): string | undefined {
   }
 }
 
-/** Make `path` a symlink to `target`, moving anything else in the way to the backup. Returns whether it changed. */
+/** Where a path finally points, following every link; undefined when it doesn't exist. */
+function realTarget(path: string): string | undefined {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Make `path` a symlink to `target`, moving anything else in the way to the
+ * backup. A link that already ends at the same file counts: git-workflow's
+ * installer links git-wt through ~/.claude/skills, this through ~/.agents/skills.
+ * Returns whether it changed.
+ */
 function ensureLink(ctx: Ctx, path: string, target: string): boolean {
-  if (linkTarget(path) === resolve(target)) return false;
+  const current = linkTarget(path);
+  if (current === resolve(target)) return false;
+  if (current && realTarget(path) !== undefined && realTarget(path) === realTarget(target)) return false;
   try {
     const st = lstatSync(path);
     if (st.isSymbolicLink()) rmSync(path);
@@ -133,9 +161,8 @@ export function ownSkillStep(name: string, harnesses: Harness[]): Step {
       const source = join(ctx.repo, "agents", "skills", name);
       const canonical = join(canonicalSkills(ctx.home), name);
       let changed = ensureLink(ctx, canonical, source);
-      for (const h of harnesses) {
-        if (h.skillsDir === ".agents/skills") continue;
-        changed = ensureLink(ctx, join(ctx.home, h.skillsDir, name), canonical) || changed;
+      for (const dir of new Set(harnesses.map((h) => h.skillsDir).filter((d) => d !== ".agents/skills"))) {
+        changed = ensureLink(ctx, join(ctx.home, dir, name), canonical) || changed;
       }
       // git-workflow brings git wt and, for Claude, its hooks, attribution settings and CLAUDE.md block.
       if (name === "git-workflow") {
