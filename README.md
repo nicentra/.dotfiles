@@ -62,7 +62,9 @@ tests/                container tests: stow smoke test, full install per distro
   anyway (bun's, Antigravity's) run inside a guard that restores the files
   afterwards.
 - **Machine-specific settings** live outside the repo, for example the git
-  identity and signing key in `~/.gitconfig.local`.
+  identity and signing key in `~/.gitconfig`. The shared git settings are
+  linked to `~/.config/git/config`, so `git config --global` writes to the
+  per-machine file, not the repo.
 
 ## Development
 
