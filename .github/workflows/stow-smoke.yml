@@ -1,0 +1,28 @@
+# Link every stow package into an empty home on each target distro and
+# check that the shells start cleanly. See tests/stow-smoke.sh.
+name: Stow smoke test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: ${{ matrix.image }} (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: "archlinux:latest", mode: minimal }
+          - { image: "archlinux:latest", mode: full }
+          - { image: "debian:trixie", mode: minimal }
+          - { image: "ubuntu:24.04", mode: minimal }
+          - { image: "ubuntu:26.04", mode: minimal }
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker run --rm -v "$PWD:/dotfiles:ro" "${{ matrix.image }}" sh /dotfiles/tests/stow-smoke.sh "${{ matrix.mode }}"
