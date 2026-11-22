@@ -1,7 +1,7 @@
 // Linking home/<package> into $HOME with GNU stow, after moving whatever is in
 // the way into the backup; and seeding the copy/<package> files.
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { type Backup, occupied } from "./files.ts";
 import type { Shell } from "./shell.ts";
 
@@ -63,6 +63,28 @@ export function conflicts(homeDir: string, home: string, packages: string[]): st
 /** Whether every file of these packages is already linked into $HOME. */
 export function allLinked(homeDir: string, home: string, packages: string[]): boolean {
   return packages.every((pkg) => packageFiles(join(homeDir, pkg)).every((rel) => linksTo(join(home, rel), join(homeDir, pkg, rel))));
+}
+
+/** Links that earlier versions of this repo made and no package provides any more. */
+export const LEGACY_LINKS = [
+  ".gitconfig", // now ~/.config/git/config; ~/.gitconfig is a per-machine file
+];
+
+/** Remove legacy links that point into home/, freeing their place. Returns the removed paths, relative to $HOME. */
+export function removeLegacyLinks(homeDir: string, home: string): string[] {
+  const removed: string[] = [];
+  for (const rel of LEGACY_LINKS) {
+    const path = join(home, rel);
+    try {
+      if (!lstatSync(path).isSymbolicLink()) continue;
+    } catch {
+      continue;
+    }
+    if (!resolve(dirname(path), readlinkSync(path)).startsWith(homeDir + sep)) continue;
+    rmSync(path);
+    removed.push(rel);
+  }
+  return removed;
 }
 
 export interface LinkResult {
