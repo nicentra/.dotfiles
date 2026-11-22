@@ -1,30 +1,23 @@
+# Interactive zsh. PATH and the environment come from ~/.zshenv.
+
+# oh-my-zsh loads the plugins and runs compinit. starship draws the prompt.
 export ZSH="$HOME/.oh-my-zsh"
-# export LANG=en_US.UTF-8
-# export LC_ALL=en_US.UTF-8
-
 ZSH_THEME=""
-
 plugins=(
   zsh-autosuggestions
   zsh-syntax-highlighting
 )
+export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=8"
 
-source $ZSH/oh-my-zsh.sh
+if [[ -r $ZSH/oh-my-zsh.sh ]]; then
+  source $ZSH/oh-my-zsh.sh
+else
+  autoload -Uz compinit && compinit
+fi
 
-# COMPLETION SETTINGS# Initialize completion system
-autoload -Uz compinit
-compinit
-
-# Enable arrow key navigation in completion menu
-zstyle ':completion:*' menu select
-
-# Group completions by category and use descriptions
-# zstyle ':completion:*' group-name ''
-# zstyle ':completion:*:descriptions' format '%F{yellow}-- %d --%f'
-
-# Case-insensitive completion
-zstyle ':completion:*' matcher-list 'm:{a-z A-Z}={A-Z a-z}'
-# zstyle :compinstall filename '/home/nicentra/.zshrc'
+# COMPLETION
+zstyle ':completion:*' menu select                                  # arrow keys in the menu
+zstyle ':completion:*' matcher-list 'm:{a-z A-Z}={A-Z a-z}'         # case-insensitive
 
 # HISTORY & BEHAVIOR
 HISTFILE=~/.zsh_history
@@ -34,26 +27,18 @@ setopt autocd extendedglob nomatch
 unsetopt beep
 bindkey -e
 
-# KEYBINDINGS (Fish-like)
-autoload -Uz up-line-or-beginning-search
-autoload -Uz down-line-or-beginning-search
+# KEYBINDINGS (Fish-like): up/down search history for what's typed so far
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
 zle -N up-line-or-beginning-search
 zle -N down-line-or-beginning-search
-bindkey '^[[A' up-line-or-beginning-search # Up
-bindkey '^[[B' down-line-or-beginning-search # Down
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
 
-export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=8"
-
-source $HOME/.zsh/exports.zsh
+source $HOME/.zsh/tools.zsh
 source $HOME/.zsh/functions.zsh
 source $HOME/.zsh/aliases.zsh
 
-eval "$(starship init zsh)"
-source <(fzf --zsh)
-eval "$(zoxide init zsh)"
-source <(command fx --init)
-
-if [ -f /usr/bin/fastfetch ]; then
+if [[ -t 1 ]] && (( $+commands[fastfetch] )); then
   clear
   fastfetch
 fi
