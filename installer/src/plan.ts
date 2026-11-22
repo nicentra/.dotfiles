@@ -31,6 +31,7 @@ export function dotfilePackages(a: Answers): { link: string[]; copy: string[] } 
   if (a.shell.zsh) link.push("zsh");
   if (a.shell.starship) link.push("starship");
   if (a.editors.vim) link.push("vim");
+  if (a.editors.neovim) link.push("nvim");
   if (a.tools.includes("fastfetch")) link.push("fastfetch");
   const copy = a.tools.includes("btop") ? ["btop"] : [];
   return { link, copy };

@@ -9,6 +9,7 @@ package. Its contents mirror `$HOME`, and stow links each file into place.
 | `zsh`       | `.zshenv`, `.zshrc`, `.zsh/`                                     | `shell`; optional: oh-my-zsh with zsh-autosuggestions and zsh-syntax-highlighting, starship, fzf, zoxide, felix (`fx`) |
 | `git`       | `.gitconfig`                                                     | git-delta             |
 | `vim`       | `.vimrc`                                                         |                       |
+| `nvim`      | `~/.config/nvim/` (lazy.nvim, catppuccin, fzf-lua, oil, gitsigns, which-key) | neovim 0.10+, git, fzf |
 | `starship`  | `~/.config/starship.toml`                                        | starship              |
 | `fastfetch` | `~/.config/fastfetch/config.jsonc`                               | fastfetch             |
 | `dotfiles`  | `~/.local/bin/dotfiles` (reruns the installer)                   | bootstrap.sh's bun    |

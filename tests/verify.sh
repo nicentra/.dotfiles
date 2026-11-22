@@ -66,7 +66,8 @@ fi
 # No installer wrote through the rc symlinks into the repo.
 dirty=$(git -C "$repo" status --porcelain -- home)
 if [ -z "$dirty" ]; then pass "repo unchanged"; else fail "repo unchanged" "$dirty"; fi
-for f in .zshrc .zshenv .bashrc .profile; do
+nvim_files=; want '.editors.neovim' && nvim_files=.config/nvim/init.lua
+for f in .zshrc .zshenv .bashrc .profile $nvim_files; do
   if [ -L "$HOME/$f" ]; then pass "~/$f is a link"; else fail "~/$f is a link"; fi
 done
 

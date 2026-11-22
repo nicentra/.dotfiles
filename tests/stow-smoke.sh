@@ -93,6 +93,10 @@ if [ "$mode" = full ]; then
     pass "zsh-autosuggestions loaded" || fail "zsh-autosuggestions loaded"
   zsh -i -c '(( $+functions[__zoxide_z] ))' </dev/null 2>/dev/null &&
     pass "zoxide loaded" || fail "zoxide loaded"
+  # neovim installs its plugins headless and then starts without errors.
+  if nvim --headless "+Lazy! sync" +qa </dev/null >/dev/null 2>&1; then pass "neovim plugins install"; else fail "neovim plugins install"; fi
+  nv=$(nvim --headless -c 'lua io.stdout:write(vim.v.errmsg == "" and (vim.g.colors_name or "none") or vim.v.errmsg)' -c 'qa!' </dev/null 2>&1)
+  if [ "$nv" = catppuccin-mocha ]; then pass "neovim starts cleanly"; else fail "neovim starts cleanly" "$nv"; fi
   # fzf's key bindings only load with a terminal, so check under a pseudo-terminal.
   script -qec "zsh -i -c '(( \$+widgets[fzf-history-widget] ))'" /dev/null >/dev/null 2>&1 &&
     pass "fzf loaded (terminal)" || fail "fzf loaded (terminal)"
