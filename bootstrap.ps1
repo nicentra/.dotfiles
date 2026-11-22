@@ -37,7 +37,7 @@ if ((Get-WslDistro) -notcontains $distro) {
 
 # Some images (Arch's) start as root. The installer belongs to a normal user
 # with sudo, so create one and make it the default.
-$uid = (wsl.exe --distribution $distro -- id -u).Trim()
+$uid = (wsl.exe --distribution $distro --exec id -u).Trim()
 if ($uid -eq '0') {
   $user = Read-Host "Linux user name to create in $distro"
   if (-not ($user -match '^[a-z_][a-z0-9_-]*$')) { throw "Not a valid Linux user name: $user" }
@@ -49,17 +49,18 @@ echo '$user ALL=(ALL:ALL) ALL' > /etc/sudoers.d/$user
 chmod 440 /etc/sudoers.d/$user
 printf '[user]\ndefault=$user\n' >> /etc/wsl.conf
 "@
-  wsl.exe --distribution $distro --user root -- sh -c $setup
+  wsl.exe --distribution $distro --user root --exec sh -c $setup
   if ($LASTEXITCODE -ne 0) { throw "creating $user failed" }
   Write-Host "Set a password for $user (sudo asks for it):" -ForegroundColor Cyan
-  wsl.exe --distribution $distro --user root -- passwd $user
+  wsl.exe --distribution $distro --user root --exec passwd $user
   wsl.exe --terminate $distro
 }
 
 Write-Host "Running the dotfiles installer in $distro" -ForegroundColor Cyan
-# No double quotes in arguments to wsl.exe: Windows PowerShell 5.1 doesn't
-# escape them for native programs. A file instead of a pipe keeps stdin on
-# the terminal for the installer's questions.
+# --exec: without it wsl.exe hands the arguments to the distro's login shell,
+# which expands $f before sh sees it. And no double quotes in arguments:
+# Windows PowerShell 5.1 doesn't escape them for native programs. A file
+# instead of a pipe keeps stdin on the terminal for the installer's questions.
 $run = "f=`$(mktemp) && curl -fsSL $bootstrap -o `$f && sh `$f $installerArgs; rc=`$?; rm -f `$f; exit `$rc"
-wsl.exe --distribution $distro --cd '~' -- sh -c $run
+wsl.exe --distribution $distro --cd '~' --exec sh -c $run
 exit $LASTEXITCODE
