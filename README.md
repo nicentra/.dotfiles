@@ -82,5 +82,5 @@ second run must change nothing.
 3. GitHub CLI login, SSH and GPG keys.
 4. The TUI on top of the engine.
 5. Agents: harnesses (opt-in), instructions, settings, skills.
-6. A neovim config.
+6. ~~A neovim config.~~
 7. Windows.

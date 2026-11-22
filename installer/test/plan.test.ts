@@ -60,7 +60,7 @@ describe("plan", () => {
 
   test("dotfile packages follow the choices", () => {
     expect(dotfilePackages(presetAnswers("workstation"))).toEqual({
-      link: ["shell", "git", "dotfiles", "zsh", "starship", "vim", "fastfetch"],
+      link: ["shell", "git", "dotfiles", "zsh", "starship", "vim", "nvim", "fastfetch"],
       copy: ["btop"],
     });
   });
