@@ -68,6 +68,19 @@ export interface Answers {
     /** Arch: install the paru AUR helper. */
     paru: boolean;
   };
+  /** The Windows side of a WSL machine, set up from inside WSL. Ignored elsewhere. */
+  windows: {
+    /** winget package ids. */
+    apps: string[];
+    /** FiraCode Nerd Font Mono, which the Windows Terminal settings use. */
+    font: boolean;
+    /** Catppuccin Mocha and the font as Windows Terminal defaults. */
+    terminal: boolean;
+    /** The shared git config and the identity for Git for Windows. */
+    git: boolean;
+    /** The git-workflow skill and Claude Code settings on Windows (with Claude Code picked). */
+    claude: boolean;
+  };
 }
 
 export const DEFAULT_SKILLS = ["git-workflow", "anthropics/skills@frontend-design", "vercel-labs/skills@find-skills"];
@@ -115,6 +128,13 @@ export function presetAnswers(preset: Preset): Answers {
     bun: { enabled: !server, via: "installer", globals: [] },
     agents: { harnesses: [], claudeSettings: true, instructions: true, skills: [...DEFAULT_SKILLS] },
     extras: { paru: !server },
+    windows: {
+      apps: server ? [] : ["Microsoft.WindowsTerminal", "Microsoft.VisualStudioCode", "Git.Git", "dandavison.delta"],
+      font: !server,
+      terminal: !server,
+      git: !server,
+      claude: !server,
+    },
   };
 }
 

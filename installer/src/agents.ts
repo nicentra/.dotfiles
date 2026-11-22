@@ -220,23 +220,30 @@ export function instructionsStep(harnesses: Harness[]): Step {
   };
 }
 
-/** Merge agents/claude/settings.json into ~/.claude/settings.json. Claude Code rewrites that file, so it's merged, not linked. */
+/**
+ * Merge agents/claude/settings.json into a Claude Code settings file: ours win,
+ * everything else stays. Claude Code rewrites the file, so it's merged, not
+ * linked. Keeps one backup of the original. Returns whether it changed.
+ */
+export function mergeClaudeSettings(repo: string, file: string): boolean {
+  const ours = JSON.parse(readFileSync(join(repo, "agents", "claude", "settings.json"), "utf8"));
+  const before = existsSync(file) ? readFileSync(file, "utf8") : "";
+  const merged = mergeDeep(before.trim() ? JSON.parse(before) : {}, ours);
+  if (before.trim() && JSON.stringify(JSON.parse(before)) === JSON.stringify(merged)) return false;
+  mkdirSync(dirname(file), { recursive: true });
+  if (before && !existsSync(`${file}.bak-dotfiles`)) copyFileSync(file, `${file}.bak-dotfiles`);
+  writeFileSync(file, `${JSON.stringify(merged, null, 2)}\n`);
+  return true;
+}
+
 export function claudeSettingsStep(): Step {
   return {
     id: "claude-settings",
     title: "Claude Code settings",
     detail: ["merge agents/claude/settings.json into ~/.claude/settings.json"],
     async run(ctx) {
-      const file = join(ctx.home, ".claude", "settings.json");
-      const ours = JSON.parse(readFileSync(join(ctx.repo, "agents", "claude", "settings.json"), "utf8"));
-      const before = existsSync(file) ? readFileSync(file, "utf8") : "";
-      const merged = mergeDeep(before.trim() ? JSON.parse(before) : {}, ours);
-      const after = `${JSON.stringify(merged, null, 2)}\n`;
-      if (before.trim() && JSON.stringify(JSON.parse(before)) === JSON.stringify(merged)) return { status: "skipped", note: "up to date" };
-      mkdirSync(dirname(file), { recursive: true });
-      if (before && !existsSync(`${file}.bak-dotfiles`)) copyFileSync(file, `${file}.bak-dotfiles`); // the original, once
-      writeFileSync(file, after);
-      return { status: "done" };
+      const changed = mergeClaudeSettings(ctx.repo, join(ctx.home, ".claude", "settings.json"));
+      return changed ? { status: "done" } : { status: "skipped", note: "up to date" };
     },
   };
 }

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Lint the repo: biome (TypeScript and JSON), the installer's typecheck and
-# tests, shellcheck (sh and bash), zsh -n (zsh) and gitleaks (staged changes).
+# tests, shellcheck (sh and bash), zsh -n (zsh), PowerShell's parser (ps1)
+# and gitleaks (staged changes).
 #
 #   sh tests/lint.sh            every tracked file, as CI does
 #   sh tests/lint.sh --staged   only what's staged; biome's fixes are restaged (pre-commit hook)
@@ -63,6 +64,22 @@ fi
 if [ -n "$zsh_files" ]; then
   say "zsh -n"
   for f in $zsh_files; do zsh -n "$f" || failed=1; done
+fi
+
+# PowerShell: parse with pwsh, or Windows PowerShell when this runs in WSL.
+ps1_files=$(printf '%s\n' "$files" | grep -E '\.ps1$' || true)
+if [ -n "$ps1_files" ]; then
+  winps=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+  for f in $ps1_files; do
+    [ -f "$f" ] || continue
+    if command -v pwsh >/dev/null 2>&1; then ps=pwsh; path=$PWD/$f
+    elif [ -x "$winps" ]; then ps=$winps; path=$(wslpath -w "$PWD/$f")
+    else say "no PowerShell here, skipping $f (CI parses it)"; continue
+    fi
+    say "powershell parse: $f"
+    errs=$(cd / && "$ps" -NoProfile -Command "\$e = \$null; [void][System.Management.Automation.Language.Parser]::ParseFile('$path', [ref]\$null, [ref]\$e); \$e | ForEach-Object { \$_.ToString() }" 2>&1 | tr -d '\r')
+    if [ -n "$errs" ]; then printf '%s\n' "$errs"; failed=1; fi
+  done
 fi
 
 if [ $staged = 1 ] && command -v gitleaks >/dev/null 2>&1; then

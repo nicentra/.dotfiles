@@ -7,6 +7,7 @@ import { HARNESSES, KNOWN_SKILLS } from "../agents.ts";
 import { type Answers, type Preset, presetAnswers } from "../answers.ts";
 import type { Plan } from "../plan.ts";
 import type { Platform } from "../platform.ts";
+import { FONT, WINDOWS_APPS } from "../windows.ts";
 import { mergeToolSelection, type NodeVersions, splitList, type ToolChoice } from "./choices.ts";
 
 export interface WizardProps {
@@ -331,6 +332,54 @@ const SCREENS: Screen[] = [
         />
       );
     },
+  },
+  {
+    id: "windows",
+    title: "Windows (this WSL's host)",
+    hint: "set up from here through WSL interop",
+    when: (_a, p) => p.platform.wsl,
+    render: ({ a, next }) => {
+      const options = [
+        { label: `${FONT.family}, for this user`, value: "font" },
+        { label: "Windows Terminal: Catppuccin Mocha and that font as defaults", value: "terminal" },
+        { label: "git config and identity for Git for Windows", value: "git" },
+        ...(a.agents.harnesses.includes("claude")
+          ? [{ label: "git-workflow skill and Claude Code settings on Windows", value: "claude" }]
+          : []),
+      ];
+      type Key = "font" | "terminal" | "git" | "claude";
+      return (
+        <MultiSelect
+          options={options}
+          defaultValue={options.filter((o) => a.windows[o.value as Key]).map((o) => o.value)}
+          onSubmit={(on) =>
+            next((x) => ({
+              ...x,
+              windows: {
+                ...x.windows,
+                font: on.includes("font"),
+                terminal: on.includes("terminal"),
+                git: on.includes("git"),
+                claude: x.agents.harnesses.includes("claude") ? on.includes("claude") : x.windows.claude,
+              },
+            }))
+          }
+        />
+      );
+    },
+  },
+  {
+    id: "windows-apps",
+    title: "Windows apps (winget)",
+    hint: "space toggles; already installed ones are skipped",
+    when: (_a, p) => p.platform.wsl,
+    render: ({ a, next }) => (
+      <MultiSelect
+        options={WINDOWS_APPS.map((w) => ({ label: w.name, value: w.id }))}
+        defaultValue={a.windows.apps}
+        onSubmit={(on) => next((x) => ({ ...x, windows: { ...x.windows, apps: on } }))}
+      />
+    ),
   },
   {
     id: "review",

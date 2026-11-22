@@ -3,8 +3,8 @@
 My shell, git, editor and agent configuration, plus an installer that sets
 up a fresh machine with these files and all the developer tools I use.
 
-Targets are Arch, Debian 13, and Ubuntu 24.04 and 26.04. Windows comes
-later. The old 2019–2020 X11 setup (bspwm, i3, polybar, fish) is kept under
+Targets are Arch, Debian 13, and Ubuntu 24.04 and 26.04, plus Windows as
+the host of a WSL install. The old 2019–2020 X11 setup (bspwm, i3, polybar, fish) is kept under
 the [`legacy-x11`](https://github.com/nicentra/.dotfiles/tree/legacy-x11) tag.
 
 ## Install
@@ -34,6 +34,24 @@ Without a terminal, pass the answers instead: `--preset workstation`,
 ```sh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/nicentra/.dotfiles/main/bootstrap.sh)" - --preset server
 ```
+
+On Windows, run this in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/nicentra/.dotfiles/main/bootstrap.ps1 | iex
+```
+
+It installs WSL with Arch (`$env:DOTFILES_DISTRO` picks another distro).
+If the distro starts as root, it creates a sudo user. Then it runs the
+installer inside WSL. From there, the installer also sets up the Windows
+side through WSL interop:
+- winget apps: Windows Terminal, VS Code, Git for Windows and delta, and
+  optionally Cursor and Docker Desktop.
+- FiraCode Nerd Font Mono.
+- Windows Terminal with Catppuccin Mocha and that font, from
+  [`windows/terminal.json`](windows/terminal.json).
+- The shared git config and identity for Git for Windows.
+- The git-workflow skill and Claude Code settings on Windows.
 
 Afterwards, the `dotfiles` command reruns the installer:
 
@@ -70,12 +88,14 @@ moved to `~/.dotfiles-backup/<time>/`, and every run writes a log to
 
 ```
 bootstrap.sh          fetch git and bun, clone, start the installer
+bootstrap.ps1         Windows: WSL with a distro, then bootstrap.sh inside it
 installer/            TypeScript on bun
   src/manifest.ts     every tool, with install methods per platform
   src/plan.ts         answers + platform → steps
   src/ui/             the TUI (Ink)
 home/<package>/       GNU stow packages, one per component (see home/README.md)
 agents/               skills (git-workflow) and Claude Code settings
+windows/              Windows Terminal settings
 copy/<package>/       configs that programs rewrite: copied once, not linked
 tests/                container tests: stow smoke test, full install per distro
 ```
@@ -127,4 +147,4 @@ twice, and the second run must change nothing.
 4. ~~The TUI on top of the engine.~~
 5. ~~Agents: harnesses (opt-in), instructions, settings, skills.~~
 6. ~~A neovim config.~~
-7. Windows.
+7. ~~Windows, as the host of a WSL install.~~
