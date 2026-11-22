@@ -346,8 +346,9 @@ const SCREENS: Screen[] = [
         ...(a.agents.harnesses.includes("claude")
           ? [{ label: "git-workflow skill and Claude Code settings on Windows", value: "claude" }]
           : []),
+        { label: "Drop Windows' PATH from WSL (keeps code, cursor, explorer.exe… as links)", value: "trimPath" },
       ];
-      type Key = "font" | "terminal" | "git" | "claude";
+      type Key = "font" | "terminal" | "git" | "claude" | "trimPath";
       return (
         <MultiSelect
           options={options}
@@ -361,6 +362,7 @@ const SCREENS: Screen[] = [
                 terminal: on.includes("terminal"),
                 git: on.includes("git"),
                 claude: x.agents.harnesses.includes("claude") ? on.includes("claude") : x.windows.claude,
+                trimPath: on.includes("trimPath"),
               },
             }))
           }
