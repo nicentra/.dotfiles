@@ -1,4 +1,5 @@
 // Answers + platform → the ordered steps of an install.
+import { claudeSettingsStep, externalSkillStep, HARNESSES, harnessStep, instructionsStep, ownSkillStep, parseSkill } from "./agents.ts";
 import type { Answers } from "./answers.ts";
 import type { Ctx, Step } from "./context.ts";
 import { githubLoginStep, gpgKeyStep, sshKeyStep } from "./github.ts";
@@ -35,6 +36,7 @@ export function wantedTools(a: Answers): string[] {
   const ids = new Set<string>(["git", "curl", "unzip", "stow", "delta" /* .gitconfig pages through it */]);
   if (a.shell.zsh) ids.add("zsh");
   if (a.shell.starship) ids.add("starship");
+  if (a.agents.harnesses.length) ids.add("jq"); // the git-workflow installer merges settings with it
   if (a.github.login) ids.add("gh");
   if (a.github.ssh) ids.add("openssh");
   if (a.github.gpg) ids.add("gnupg");
@@ -108,9 +110,25 @@ export async function buildPlan(ctx: Ctx): Promise<Plan> {
     if (a.bun.globals.length) steps.push(bunGlobalsStep(a.bun.globals));
   }
 
+  steps.push(...agentSteps(a, notes));
   if (a.editors.neovim) steps.push(neovimPluginsStep());
   if (a.shell.zsh && a.shell.loginShell && ctx.platform.os === "linux") steps.push(loginShellStep());
   if (a.extras.paru && ctx.platform.family === "arch") steps.push(paruStep());
   steps.push(repoDevSetupStep());
   return { steps, notes };
+}
+
+/** Harnesses, then their skills, instructions and settings. Nothing when no harness is picked. */
+export function agentSteps(a: Answers, notes: string[]): Step[] {
+  const picked = HARNESSES.filter((h) => a.agents.harnesses.includes(h.id));
+  const unknown = a.agents.harnesses.filter((id) => !HARNESSES.some((h) => h.id === id));
+  if (unknown.length) notes.push(`Unknown agent harnesses in the answers, ignored: ${unknown.join(", ")}`);
+  if (!picked.length) return [];
+  const steps: Step[] = picked.map(harnessStep);
+  for (const spec of a.agents.skills) {
+    steps.push(parseSkill(spec).source ? externalSkillStep(spec, picked) : ownSkillStep(spec, picked));
+  }
+  if (a.agents.instructions && a.agents.skills.includes("git-workflow")) steps.push(instructionsStep(picked));
+  if (a.agents.claudeSettings && picked.some((h) => h.id === "claude")) steps.push(claudeSettingsStep());
+  return steps;
 }

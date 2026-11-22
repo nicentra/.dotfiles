@@ -55,14 +55,22 @@ export interface Answers {
     globals: string[];
   };
   agents: {
-    /** Harness ids from the manifest. Nothing is installed unless picked. */
+    /** Agent harnesses to install (claude, codex, antigravity, opencode). Nothing is installed unless picked. */
     harnesses: string[];
+    /** Merge agents/claude/settings.json into ~/.claude/settings.json (with Claude Code). */
+    claudeSettings: boolean;
+    /** The git-workflow rules as every picked harness's global instructions. */
+    instructions: boolean;
+    /** "git-workflow" (this repo) or owner/repo@skill for the skills CLI. */
+    skills: string[];
   };
   extras: {
     /** Arch: install the paru AUR helper. */
     paru: boolean;
   };
 }
+
+export const DEFAULT_SKILLS = ["git-workflow", "anthropics/skills@frontend-design", "vercel-labs/skills@find-skills"];
 
 export const OMZ_PLUGINS = ["zsh-users/zsh-autosuggestions", "zsh-users/zsh-syntax-highlighting"];
 
@@ -105,7 +113,7 @@ export function presetAnswers(preset: Preset): Answers {
     node: { enabled: !server, version: "lts", globals: [] },
     python: { enabled: !server, version: "latest", freethreaded: false, tools: server ? [] : ["ruff"] },
     bun: { enabled: !server, via: "installer", globals: [] },
-    agents: { harnesses: [] },
+    agents: { harnesses: [], claudeSettings: true, instructions: true, skills: [...DEFAULT_SKILLS] },
     extras: { paru: !server },
   };
 }

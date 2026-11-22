@@ -184,7 +184,7 @@ export function gitIdentityStep(): Step {
 }
 
 /** Run an official install script: download it, then run it with the given shell. */
-async function runInstallScript(ctx: Ctx, url: string, shell: "sh" | "bash", env: Record<string, string>, args: string[] = []) {
+export async function runInstallScript(ctx: Ctx, url: string, shell: "sh" | "bash", env: Record<string, string>, args: string[] = []) {
   await withTempDir(async (tmp) => {
     const script = join(tmp, "install.sh");
     await download(url, script);

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "preset": "server",
+  "git": { "name": "Test User", "email": "test@example.com", "signingKey": "" },
+  "agents": { "harnesses": ["claude", "codex", "antigravity", "opencode"] }
+}

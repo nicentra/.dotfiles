@@ -50,6 +50,17 @@ the account. It then reuses or creates a GPG key, adds that too, and turns
 on signed commits. These steps need you at the terminal, so runs without
 one skip them and say so.
 
+Agent harnesses are opt-in: nothing is picked by default. For the ones you
+pick (Claude Code, Codex, Antigravity, opencode), the installer:
+- installs each with its official script.
+- links this repo's skills from [`agents/skills/`](agents/skills/), such as
+  git-workflow and its `git wt` command, plus third-party skills through
+  the [skills CLI](https://github.com/vercel-labs/skills).
+- writes the git-workflow rules into each harness's global instructions,
+  as a managed block that leaves the rest of the file alone.
+- merges [`agents/claude/settings.json`](agents/claude/settings.json) into
+  Claude Code's settings.
+
 The answers are saved in `~/.config/dotfiles/answers.json`. Each step checks
 first, so a rerun only does what changed. Files that linking replaces are
 moved to `~/.dotfiles-backup/<time>/`, and every run writes a log to
@@ -64,6 +75,7 @@ installer/            TypeScript on bun
   src/plan.ts         answers + platform → steps
   src/ui/             the TUI (Ink)
 home/<package>/       GNU stow packages, one per component (see home/README.md)
+agents/               skills (git-workflow) and Claude Code settings
 copy/<package>/       configs that programs rewrite: copied once, not linked
 tests/                container tests: stow smoke test, full install per distro
 ```
@@ -113,6 +125,6 @@ twice, and the second run must change nothing.
 2. ~~Installer engine and manifest, headless, tested in Docker.~~
 3. ~~GitHub CLI login, SSH and GPG keys.~~
 4. ~~The TUI on top of the engine.~~
-5. Agents: harnesses (opt-in), instructions, settings, skills.
+5. ~~Agents: harnesses (opt-in), instructions, settings, skills.~~
 6. ~~A neovim config.~~
 7. Windows.

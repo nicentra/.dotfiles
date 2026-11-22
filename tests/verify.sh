@@ -50,6 +50,28 @@ if want '.extras.paru' && command -v pacman >/dev/null 2>&1; then
   if command -v paru >/dev/null; then pass "paru installed"; else fail "paru installed"; fi
 fi
 
+harnesses=$(jq -r '.agents.harnesses[]? // empty' "$answers")
+for h in $harnesses; do
+  case $h in antigravity) bin=agy ;; *) bin=$h ;; esac
+  if in_zsh "command -v $bin" >/dev/null; then pass "$h installed"; else fail "$h installed"; fi
+done
+if [ -n "$harnesses" ]; then
+  for s in $(jq -r '.agents.skills[]' "$answers"); do
+    name=${s##*@}
+    if [ -f "$HOME/.agents/skills/$name/SKILL.md" ]; then pass "skill $name"; else fail "skill $name"; fi
+  done
+  if in_zsh 'command -v git-wt' >/dev/null; then pass "git-wt on PATH"; else fail "git-wt on PATH"; fi
+  picked() { printf '%s\n' "$harnesses" | grep -qx "$1"; }
+  if picked claude; then
+      if [ -L "$HOME/.claude/skills/git-workflow" ] && [ -f "$HOME/.claude/skills/git-workflow/SKILL.md" ]; then pass "claude sees git-workflow"; else fail "claude sees git-workflow"; fi
+      if jq -e '.hooks.PreToolUse and .editorMode == "vim"' "$HOME/.claude/settings.json" >/dev/null; then pass "claude settings merged"; else fail "claude settings merged"; fi
+      if grep -q 'git-workflow:start' "$HOME/.claude/CLAUDE.md"; then pass "claude instructions"; else fail "claude instructions"; fi
+  fi
+  if picked codex; then
+    if grep -q 'git-workflow:start' "$HOME/.codex/AGENTS.md"; then pass "codex instructions"; else fail "codex instructions"; fi
+  fi
+fi
+
 if want '.shell.loginShell'; then
   s=$(getent passwd "$(id -un)" | cut -d: -f7)
   case $s in */zsh) pass "login shell is $s" ;; *) fail "login shell is zsh" "$s" ;; esac
