@@ -1,6 +1,8 @@
-# Shared git settings. Identity and commit signing differ per machine and
-# live in ~/.gitconfig.local, included at the end so it can override
-# anything here. Diffs are paged through delta (git-delta).
+# Shared git settings, linked to ~/.config/git/config. git reads this file
+# first and ~/.gitconfig after it, so ~/.gitconfig holds what differs per
+# machine (identity, signing) and can override anything here. It also gets
+# whatever `git config --global` and tools such as `gh auth setup-git`
+# write, instead of this repo. Diffs are paged through delta (git-delta).
 
 [init]
 	defaultBranch = main
@@ -37,6 +39,3 @@
 
 [merge]
 	conflictStyle = zdiff3
-
-[include]
-	path = ~/.gitconfig.local

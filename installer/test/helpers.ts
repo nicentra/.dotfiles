@@ -49,6 +49,9 @@ export const APT: Record<string, Record<string, string>> = {
     zsh: "5.9-8",
     stow: "2.4.1-2",
     starship: "1.22.1-5",
+    gnupg: "2.4.7-21+deb13u1",
+    "pinentry-curses": "1.3.1-2",
+    "openssh-client": "1:10.0p1-7+deb13u4",
   },
   ubuntu2404: {
     git: "1:2.43.0-1ubuntu7.4",
@@ -75,6 +78,9 @@ export const APT: Record<string, Record<string, string>> = {
     neovim: "0.9.5-6ubuntu2",
     zsh: "5.9-6ubuntu2",
     stow: "2.3.1-1",
+    gnupg: "2.4.4-2ubuntu17.6",
+    "pinentry-curses": "1.2.1-3ubuntu5",
+    "openssh-client": "1:9.6p1-3ubuntu13.20",
   },
 };
 
@@ -109,5 +115,6 @@ export function fakeCtx(p: Platform, answers: Answers, opts: { probe?: Probe; pr
     sh: new FakeShell(opts.present),
     probe: opts.probe ?? probe(),
     backup: new Backup(home, "test"),
+    interactive: false,
   };
 }

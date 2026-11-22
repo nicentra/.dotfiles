@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { conflicts, copyPackages, packageFiles } from "../src/link.ts";
+import { conflicts, copyPackages, packageFiles, removeLegacyLinks } from "../src/link.ts";
 import { tmp } from "./helpers.ts";
 
 function fakeRepo() {
@@ -42,5 +42,18 @@ describe("link", () => {
     writeFileSync(join(home, ".config", "btop", "btop.conf"), "theme=dracula\n");
     expect(copyPackages(repo, home, ["btop"])).toEqual({ copied: [], kept: [".config/btop/btop.conf"] });
     expect(readFileSync(join(home, ".config", "btop", "btop.conf"), "utf8")).toBe("theme=dracula\n");
+  });
+
+  test("removes old links into the repo, and nothing else", () => {
+    const repo = fakeRepo();
+    const home = tmp("home-");
+    symlinkSync(join(repo, "home", "git", ".gitconfig"), join(home, ".gitconfig")); // dangling, like after the move
+    expect(removeLegacyLinks(join(repo, "home"), home)).toEqual([".gitconfig"]);
+    expect(existsSync(join(home, ".gitconfig")) || lstatSync(join(home, ".gitconfig"), { throwIfNoEntry: false })).toBeFalsy();
+
+    const other = tmp("other-");
+    writeFileSync(join(other, "gitconfig"), "[user]\n");
+    symlinkSync(join(other, "gitconfig"), join(home, ".gitconfig")); // the user's own link
+    expect(removeLegacyLinks(join(repo, "home"), home)).toEqual([]);
   });
 });

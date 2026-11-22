@@ -1,10 +1,10 @@
 // The individual steps of an install. Each one checks first and skips what's
 // already in place, so a rerun only does what changed.
-import { copyFileSync, cpSync, existsSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import { appendFileSync, copyFileSync, cpSync, existsSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { bunHome, type Ctx, localBin, localOpt, pnpmHome, type Step } from "./context.ts";
 import { download, ensureDir, extract, fetchText, latestGithubTag, makeExecutable, occupied, withTempDir } from "./files.ts";
-import { allLinked, copyPackages, linkPackages } from "./link.ts";
+import { allLinked, copyPackages, linkPackages, removeLegacyLinks } from "./link.ts";
 import { describeMethod, type Method, parseVersion, type Tool } from "./manifest.ts";
 import { compareVersions } from "./platform.ts";
 
@@ -103,11 +103,13 @@ export function linkStep(packages: string[], copies: string[]): Step {
     critical: true,
     guardRc: false, // this step is what changes the rc files
     async run(ctx) {
-      const linked = allLinked(join(ctx.repo, "home"), ctx.home, packages);
+      const legacy = removeLegacyLinks(join(ctx.repo, "home"), ctx.home);
+      const linked = !legacy.length && allLinked(join(ctx.repo, "home"), ctx.home, packages);
       const { backedUp } = linked ? { backedUp: [] } : await linkPackages(ctx.sh, ctx.repo, ctx.home, packages, ctx.backup);
       const { copied } = copyPackages(ctx.repo, ctx.home, copies);
       if (linked && !copied.length) return { status: "skipped", note: "already linked" };
       const notes = [];
+      if (legacy.length) notes.push(`removed old links: ${legacy.join(", ")}`);
       if (backedUp.length) notes.push(`moved ${backedUp.length} existing file(s) to ${ctx.backup.path}`);
       if (copied.length) notes.push(`copied ${copied.join(", ")}`);
       return { status: "done", note: notes.join("; ") || undefined };
@@ -137,27 +139,46 @@ export function ohMyZshStep(plugins: string[]): Step {
   };
 }
 
+const GITCONFIG_HEADER = `# Per-machine git settings: identity, signing, and whatever \`git config --global\`
+# and tools write. The shared settings are in ~/.config/git/config, linked from
+# the dotfiles repo; this file is read after it and wins.
+`;
+
 export function gitIdentityStep(): Step {
   return {
     id: "git-identity",
-    title: "Git identity (~/.gitconfig.local)",
+    title: "Git identity (~/.gitconfig)",
     detail: ["user.name, user.email and the signing key"],
     async run(ctx) {
       const { name, email, signingKey } = ctx.answers.git;
-      const file = join(ctx.home, ".gitconfig.local");
+      const file = join(ctx.home, ".gitconfig");
+      let changed = 0;
+      // ~/.gitconfig has to be a real file: \`git config --global\` writes there when
+      // it exists, and into the linked ~/.config/git/config (this repo) when not.
+      if (!occupied(file)) {
+        writeFileSync(file, GITCONFIG_HEADER);
+        changed++;
+      }
+      // The earlier layout kept the identity in ~/.gitconfig.local, included
+      // from a linked ~/.gitconfig.
+      const legacy = join(ctx.home, ".gitconfig.local");
+      if (existsSync(legacy)) {
+        appendFileSync(file, `\n${readFileSync(legacy, "utf8")}`);
+        ctx.backup.move(legacy);
+        changed++;
+      }
       const want: [string, string][] = [];
       if (name) want.push(["user.name", name]);
       if (email) want.push(["user.email", email]);
       if (signingKey) want.push(["user.signingkey", signingKey], ["commit.gpgsign", "true"], ["tag.gpgsign", "true"]);
-      if (!want.length) return { status: "skipped", note: "no identity given" };
-      let changed = 0;
       for (const [key, value] of want) {
         const current = await ctx.sh.run(["git", "config", "--file", file, "--get", key], { allowFail: true });
         if (current.stdout.trim() === value) continue;
         await ctx.sh.run(["git", "config", "--file", file, key, value]);
         changed++;
       }
-      return changed ? { status: "done" } : { status: "skipped", note: "unchanged" };
+      if (changed) return { status: "done" };
+      return { status: "skipped", note: want.length ? "unchanged" : "no identity given" };
     },
   };
 }

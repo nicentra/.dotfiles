@@ -7,7 +7,7 @@ package. Its contents mirror `$HOME`, and stow links each file into place.
 |-------------|------------------------------------------------------------------|-----------------------|
 | `shell`     | `~/.config/shell/env.sh` (PATH and environment), `.profile`, `.bashrc`, `.bash_profile` | |
 | `zsh`       | `.zshenv`, `.zshrc`, `.zsh/`                                     | `shell`; optional: oh-my-zsh with zsh-autosuggestions and zsh-syntax-highlighting, starship, fzf, zoxide, felix (`fx`) |
-| `git`       | `.gitconfig`                                                     | git-delta             |
+| `git`       | `~/.config/git/config` (shared settings)                         | git-delta             |
 | `vim`       | `.vimrc`                                                         |                       |
 | `nvim`      | `~/.config/nvim/` (lazy.nvim, catppuccin, fzf-lua, oil, gitsigns, which-key) | neovim 0.10+, git, fzf |
 | `starship`  | `~/.config/starship.toml`                                        | starship              |
@@ -33,8 +33,11 @@ into `~/.dotfiles-backup/`.
 
 ## Per-machine files
 
-The git identity and signing setup aren't in this repo. Create
-`~/.gitconfig.local`, which `.gitconfig` includes:
+`~/.gitconfig` isn't linked. git reads it after the shared
+`~/.config/git/config`, so it holds what differs per machine (identity,
+signing key) and wins over the shared settings. It also receives
+everything `git config --global` and tools such as `gh auth setup-git`
+write. The installer creates it and fills in the identity:
 
 ```ini
 [user]

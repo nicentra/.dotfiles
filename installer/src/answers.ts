@@ -22,6 +22,14 @@ export interface Answers {
     /** GPG key id; empty for unsigned commits. */
     signingKey: string;
   };
+  github: {
+    /** Log in to GitHub with gh (interactive: browser login). */
+    login: boolean;
+    /** Create ~/.ssh/id_ed25519 if missing and add it to the GitHub account. */
+    ssh: boolean;
+    /** Use or create a GPG signing key, add it to GitHub, sign commits and tags. */
+    gpg: boolean;
+  };
   editors: { vim: boolean; neovim: boolean };
   /** Manifest ids of the CLI tools to install. */
   tools: string[];
@@ -91,6 +99,7 @@ export function presetAnswers(preset: Preset): Answers {
     preset,
     shell: { zsh: true, ohMyZsh: true, plugins: [...OMZ_PLUGINS], starship: true, loginShell: true },
     git: { name: "", email: "", signingKey: "" },
+    github: { login: !server, ssh: !server, gpg: !server },
     editors: { vim: true, neovim: !server },
     tools: [...(server ? SERVER_TOOLS : WORKSTATION_TOOLS)],
     node: { enabled: !server, version: "lts", globals: [] },
