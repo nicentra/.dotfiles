@@ -1,3 +1,4 @@
+# shellcheck shell=bash source=/dev/null
 #
 # ~/.bash_profile
 #

@@ -3,6 +3,7 @@
 # are there, the shell starts cleanly and no installer edited the repo.
 # Reads the answers the installer saved, with every default filled in.
 #   sh tests/verify.sh [answers.json]
+# shellcheck disable=SC2088,SC2015 # "~/x" in messages is display text; pass never fails
 set -eu
 answers=${1:-$HOME/.config/dotfiles/answers.json}
 repo=$(cd "$(dirname "$0")/.." && pwd)
