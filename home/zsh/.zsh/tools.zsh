@@ -2,7 +2,7 @@
 # so the same file works on a minimal machine. Runs after compinit.
 
 (( $+commands[starship] )) && eval "$(starship init zsh)"
-(( $+commands[fzf] ))      && source <(fzf --zsh)
+(( $+commands[fzf] ))      && [[ -t 0 ]] && source <(fzf --zsh)   # key bindings need a terminal
 (( $+commands[zoxide] ))   && eval "$(zoxide init zsh)"
 (( $+commands[fx] ))       && source <(command fx --init)   # felix; cd to its last dir on exit
 
