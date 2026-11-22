@@ -7,7 +7,11 @@ import { tmp } from "./helpers.ts";
 describe("answers", () => {
   test("presets only name known tools", () => {
     for (const preset of ["workstation", "server"] as const) {
-      for (const id of presetAnswers(preset).tools) expect(TOOLS.some((t) => t.id === id), id).toBe(true);
+      for (const id of presetAnswers(preset).tools)
+        expect(
+          TOOLS.some((t) => t.id === id),
+          id,
+        ).toBe(true);
     }
   });
 

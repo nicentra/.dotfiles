@@ -1,10 +1,24 @@
 // Answers + platform → the ordered steps of an install.
 import type { Answers } from "./answers.ts";
 import type { Ctx, Step } from "./context.ts";
-import { type Method, type Tool, TOOLS, resolveMethod, tool } from "./manifest.ts";
+import { type Method, resolveMethod, TOOLS, type Tool, tool } from "./manifest.ts";
 import {
-  bunGlobalsStep, bunStep, githubToolStep, gitIdentityStep, installedVersionOk, linkStep, loginShellStep, nodeStep,
-  ohMyZshStep, paruStep, pnpmGlobalsStep, pnpmStep, pythonStep, systemPackagesStep, uvStep, uvToolsStep,
+  bunGlobalsStep,
+  bunStep,
+  githubToolStep,
+  gitIdentityStep,
+  installedVersionOk,
+  linkStep,
+  loginShellStep,
+  nodeStep,
+  ohMyZshStep,
+  paruStep,
+  pnpmGlobalsStep,
+  pnpmStep,
+  pythonStep,
+  systemPackagesStep,
+  uvStep,
+  uvToolsStep,
 } from "./steps.ts";
 
 export interface Plan {

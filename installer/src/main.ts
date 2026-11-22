@@ -3,14 +3,14 @@
 import { homedir, userInfo } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { type Answers, type Preset, answersPath, loadAnswers, presetAnswers, saveAnswers } from "./answers.ts";
+import { type Answers, answersPath, loadAnswers, type Preset, presetAnswers, saveAnswers } from "./answers.ts";
 import { type Ctx, prependToolPaths } from "./context.ts";
 import { Backup } from "./files.ts";
 import type { Probe } from "./manifest.ts";
 import { buildPlan } from "./plan.ts";
 import { detectPlatform } from "./platform.ts";
 import { bold, consoleReporter, dim, green, red, runSteps, yellow } from "./runner.ts";
-import { Log, Shell, detectRootPrefix } from "./shell.ts";
+import { detectRootPrefix, Log, Shell } from "./shell.ts";
 
 const HELP = `Usage: dotfiles [options]
 
@@ -81,6 +81,7 @@ async function main(argv: string[]): Promise<number> {
     },
     async nativeInstalled(pkg) {
       if (platform.family === "arch") return sh.ok(["pacman", "-Q", pkg]);
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: dpkg-query's format syntax, not a template
       const out = await sh.run(["dpkg-query", "-W", "-f=${Status}", pkg], { allowFail: true }).catch(() => undefined);
       return out?.stdout.includes("install ok installed") ?? false;
     },

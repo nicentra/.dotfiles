@@ -2,10 +2,10 @@
 // already in place, so a rerun only does what changed.
 import { copyFileSync, cpSync, existsSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
-import { type Ctx, type Step, bunHome, localBin, localOpt, pnpmHome } from "./context.ts";
+import { bunHome, type Ctx, localBin, localOpt, pnpmHome, type Step } from "./context.ts";
 import { download, ensureDir, extract, fetchText, latestGithubTag, makeExecutable, occupied, withTempDir } from "./files.ts";
 import { allLinked, copyPackages, linkPackages } from "./link.ts";
-import { type Method, type Tool, describeMethod, parseVersion } from "./manifest.ts";
+import { describeMethod, type Method, parseVersion, type Tool } from "./manifest.ts";
 import { compareVersions } from "./platform.ts";
 
 type Native = Extract<Method, { kind: "pacman" | "apt" }>;
@@ -125,7 +125,7 @@ export function ohMyZshStep(plugins: string[]): Step {
       const todo: [string, string][] = [];
       if (!existsSync(omz)) todo.push(["ohmyzsh/ohmyzsh", omz]);
       for (const p of plugins) {
-        const dir = join(omz, "custom", "plugins", p.split("/")[1]!);
+        const dir = join(omz, "custom", "plugins", p.split("/").at(-1) ?? p);
         if (!existsSync(dir)) todo.push([p, dir]);
       }
       if (!todo.length) return { status: "skipped", note: "already installed" };
@@ -301,7 +301,10 @@ export function uvToolsStep(tools: string[]): Step {
     detail: [tools.join(" ")],
     async run(ctx) {
       const listed = await ctx.sh.capture(["uv", "tool", "list"]).catch(() => "");
-      const have = listed.split("\n").filter((l) => l && !l.startsWith("-")).map((l) => l.split(" ")[0]);
+      const have = listed
+        .split("\n")
+        .filter((l) => l && !l.startsWith("-"))
+        .map((l) => l.split(" ")[0]);
       const missing = tools.filter((t) => !have.includes(t));
       if (!missing.length) return { status: "skipped", note: "already installed" };
       for (const t of missing) await ctx.sh.run(["uv", "tool", "install", t]);
