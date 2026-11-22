@@ -24,6 +24,7 @@ import {
   uvStep,
   uvToolsStep,
 } from "./steps.ts";
+import { windowsAppsStep, windowsClaudeStep, windowsFontStep, windowsGitStep, windowsTerminalStep } from "./windows.ts";
 
 export interface Plan {
   steps: Step[];
@@ -111,6 +112,7 @@ export async function buildPlan(ctx: Ctx): Promise<Plan> {
   }
 
   steps.push(...agentSteps(a, notes));
+  if (ctx.platform.wsl) steps.push(...windowsSteps(a));
   if (a.editors.neovim) steps.push(neovimPluginsStep());
   if (a.shell.zsh && a.shell.loginShell && ctx.platform.os === "linux") steps.push(loginShellStep());
   if (a.extras.paru && ctx.platform.family === "arch") steps.push(paruStep());
@@ -130,5 +132,19 @@ export function agentSteps(a: Answers, notes: string[]): Step[] {
   }
   if (a.agents.instructions && a.agents.skills.includes("git-workflow")) steps.push(instructionsStep(picked));
   if (a.agents.claudeSettings && picked.some((h) => h.id === "claude")) steps.push(claudeSettingsStep());
+  return steps;
+}
+
+/** The Windows host of a WSL machine: apps first (Git and delta), then what uses them. */
+export function windowsSteps(a: Answers): Step[] {
+  const w = a.windows;
+  // The shared git config pages through delta, so Git for Windows needs it too.
+  const apps = w.git ? [...new Set([...w.apps, "Git.Git", "dandavison.delta"])] : w.apps;
+  const steps: Step[] = [];
+  if (apps.length) steps.push(windowsAppsStep(apps));
+  if (w.font) steps.push(windowsFontStep());
+  if (w.terminal) steps.push(windowsTerminalStep());
+  if (w.git) steps.push(windowsGitStep());
+  if (w.claude && a.agents.harnesses.includes("claude")) steps.push(windowsClaudeStep());
   return steps;
 }

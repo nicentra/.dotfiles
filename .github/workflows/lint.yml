@@ -22,3 +22,20 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: installer
       - run: sh tests/lint.sh
+
+  powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Parse and analyze bootstrap.ps1
+        shell: pwsh
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD/bootstrap.ps1", [ref]$null, [ref]$errors)
+          if ($errors) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) { Install-Module PSScriptAnalyzer -Force -Scope CurrentUser }
+          # Write-Host is on purpose: colored progress on the console, nothing to pipe.
+          $issues = Invoke-ScriptAnalyzer -Path bootstrap.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost
+          $issues | Format-Table -AutoSize | Out-String | Write-Host
+          if ($issues) { exit 1 }
+
