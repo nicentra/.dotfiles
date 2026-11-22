@@ -303,7 +303,8 @@ function Review({
     <Box flexDirection="column">
       {plan.steps.map((s, i) => {
         const asks = s.interactive ? " (asks you)" : "";
-        const room = (columns || 100) - 8 - s.title.length - asks.length;
+        // padding (2) + "NN. " (4) + " · " (3), plus a column so the terminal never wraps
+        const room = (columns || 100) - 10 - s.title.length - asks.length;
         return (
           <Text key={s.id}>
             <Text dimColor>{String(i + 1).padStart(2)}.</Text> {s.title}
@@ -314,7 +315,7 @@ function Review({
       })}
       {plan.notes.map((n) => (
         <Text key={n} color="yellow">
-          note: {n}
+          {fit(`note: ${n}`, (columns || 100) - 3)}
         </Text>
       ))}
       <Box marginTop={1}>
