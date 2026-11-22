@@ -14,7 +14,7 @@ answers=/src/tests/answers/$name.json
 
 # A sudo-capable user, like a real machine. sudo itself is the only setup.
 if command -v pacman >/dev/null 2>&1; then
-  pacman -Sy --noconfirm --needed sudo >/dev/null
+  pacman -Syu --noconfirm --needed sudo >/dev/null
 elif command -v apt-get >/dev/null 2>&1; then
   apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sudo >/dev/null
 fi
