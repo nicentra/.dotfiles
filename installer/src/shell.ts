@@ -104,6 +104,19 @@ export class Shell {
     return result;
   }
 
+  /**
+   * Run with the terminal attached, for commands that ask the user something
+   * (gh auth login, ssh-keygen, gpg). Output isn't captured or logged.
+   */
+  async interactive(cmd: string[], opts: Pick<RunOptions, "env" | "cwd" | "allowFail"> = {}): Promise<number> {
+    this.log.write(`$ ${cmd.join(" ")}   (interactive)`);
+    const proc = Bun.spawn(cmd, { cwd: opts.cwd, env: { ...process.env, ...opts.env }, stdio: ["inherit", "inherit", "inherit"] });
+    const code = await proc.exited;
+    this.log.write(`(exit ${code})`);
+    if (code !== 0 && !opts.allowFail) throw new Error(`${cmd.join(" ")} exited with ${code}`);
+    return code;
+  }
+
   /** True when the command exits 0. Never throws for a non-zero exit. */
   async ok(cmd: string[], opts: RunOptions = {}): Promise<boolean> {
     try {

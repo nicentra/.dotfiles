@@ -15,6 +15,8 @@ export interface Ctx {
   sh: Shell;
   probe: Probe;
   backup: Backup;
+  /** Someone is at the terminal, so interactive steps can run. */
+  interactive: boolean;
 }
 
 export type StepResult = { status: "done" | "skipped"; note?: string };
@@ -28,6 +30,8 @@ export interface Step {
   critical?: boolean;
   /** Undo rc-file edits made while this step runs (default true). */
   guardRc?: boolean;
+  /** Needs a person at the terminal; skipped when there's none. */
+  interactive?: boolean;
   run(ctx: Ctx): Promise<StepResult>;
 }
 

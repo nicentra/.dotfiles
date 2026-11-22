@@ -79,9 +79,8 @@ for a in ps pr; do
   if zsh -i -c "alias $a" >/dev/null 2>&1 </dev/null; then fail "alias $a is defined"; else pass "no alias $a"; fi
 done
 
-# git reads the shared config and the include for ~/.gitconfig.local.
-if [ "$(git config --global init.defaultBranch)" = main ] &&
-   [ "$(git config --global include.path)" = "~/.gitconfig.local" ]; then
+# git reads the shared config from ~/.config/git/config.
+if [ "$(cd / && git config init.defaultBranch)" = main ] && [ -L "$HOME/.config/git/config" ]; then
   pass "git config"
 else
   fail "git config"

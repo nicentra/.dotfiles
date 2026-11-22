@@ -1,6 +1,7 @@
 // Answers + platform → the ordered steps of an install.
 import type { Answers } from "./answers.ts";
 import type { Ctx, Step } from "./context.ts";
+import { githubLoginStep, gpgKeyStep, sshKeyStep } from "./github.ts";
 import { type Method, resolveMethod, TOOLS, type Tool, tool } from "./manifest.ts";
 import {
   bunGlobalsStep,
@@ -33,6 +34,9 @@ export function wantedTools(a: Answers): string[] {
   const ids = new Set<string>(["git", "curl", "unzip", "stow", "delta" /* .gitconfig pages through it */]);
   if (a.shell.zsh) ids.add("zsh");
   if (a.shell.starship) ids.add("starship");
+  if (a.github.login) ids.add("gh");
+  if (a.github.ssh) ids.add("openssh");
+  if (a.github.gpg) ids.add("gnupg");
   if (a.editors.vim) ids.add("vim");
   if (a.editors.neovim) ids.add("neovim");
   for (const t of a.tools) ids.add(t);
@@ -83,7 +87,11 @@ export async function buildPlan(ctx: Ctx): Promise<Plan> {
   steps.push(linkStep(pkgs.link, pkgs.copy));
   if (a.shell.zsh && a.shell.ohMyZsh) steps.push(ohMyZshStep(a.shell.plugins));
   steps.push(...github);
+  // Login first: it can fill in a missing git identity from the account.
+  if (a.github.login) steps.push(githubLoginStep());
   steps.push(gitIdentityStep());
+  if (a.github.ssh) steps.push(sshKeyStep());
+  if (a.github.gpg) steps.push(gpgKeyStep());
 
   if (a.node.enabled || a.bun.via === "pnpm") steps.push(pnpmStep());
   if (a.node.enabled) {

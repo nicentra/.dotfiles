@@ -25,7 +25,10 @@ export async function runSteps(ctx: Ctx, steps: Step[], reporter: Reporter): Pro
     const guard = step.guardRc === false ? undefined : new RcGuard(ctx.home);
     const started = performance.now();
     try {
-      const result = await step.run(ctx);
+      const result: StepResult =
+        step.interactive && !ctx.interactive
+          ? { status: "skipped", note: "needs a terminal; run dotfiles in one to finish it" }
+          : await step.run(ctx);
       (result.status === "done" ? summary.done : summary.skipped).push(step);
       reporter.finish(i, steps.length, step, result, performance.now() - started);
     } catch (e) {
@@ -61,7 +64,9 @@ export function consoleReporter(): Reporter {
   const secs = (ms: number) => dim(`${(ms / 1000).toFixed(1)}s`);
   return {
     start(i, n, step) {
-      if (process.stdout.isTTY) process.stdout.write(`${counter(i, n)} ${step.title} …`);
+      // Interactive steps print their own prompts, so their title gets a line of its own.
+      if (step.interactive && process.stdout.isTTY) process.stdout.write(`${counter(i, n)} ${bold(step.title)}\n`);
+      else if (process.stdout.isTTY) process.stdout.write(`${counter(i, n)} ${step.title} …`);
     },
     finish(i, n, step, result, ms) {
       const status = result.status === "done" ? green("done") : dim("skipped");

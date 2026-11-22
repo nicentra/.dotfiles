@@ -140,6 +140,26 @@ export const TOOLS: Tool[] = [
     ],
   },
   {
+    id: "openssh",
+    name: "OpenSSH",
+    group: "git",
+    description: "ssh and ssh-keygen",
+    bin: "ssh-keygen",
+    methods: native("openssh", "openssh-client"),
+  },
+  {
+    id: "gnupg",
+    name: "GnuPG",
+    group: "git",
+    description: "gpg, for signed commits",
+    bin: "gpg",
+    // Debian only recommends a pinentry, and --no-install-recommends skips it: no passphrase prompt without one.
+    methods: [
+      { kind: "pacman", pkgs: ["gnupg"] },
+      { kind: "apt", pkgs: ["gnupg", "pinentry-curses"] },
+    ],
+  },
+  {
     id: "ghq",
     name: "ghq",
     group: "git",

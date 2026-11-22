@@ -57,12 +57,20 @@ if [ -z "$out" ]; then pass "zsh starts cleanly"; else fail "zsh starts cleanly"
 p=$(zsh -c 'echo $PATH')
 case $p in "$HOME/.local/bin:"*) pass "PATH starts with ~/.local/bin" ;; *) fail "PATH starts with ~/.local/bin" "$p" ;; esac
 
-if [ "$(git config --global init.defaultBranch)" = main ]; then pass "git reads the shared config"; else fail "git reads the shared config"; fi
+# Not --global: once ~/.gitconfig exists, --global reads only that file; git itself reads both.
+if [ "$(cd / && git config init.defaultBranch)" = main ]; then pass "git reads the shared config"; else fail "git reads the shared config"; fi
 n=$(jq -r '.git.name // ""' "$answers")
 if [ -n "$n" ]; then
-  # Not --global: that reads ~/.gitconfig without following its include.
-  if [ "$(git config user.name)" = "$n" ]; then pass "git identity from ~/.gitconfig.local"; else fail "git identity" "$(git config user.name)"; fi
+  if [ "$(git config --global user.name)" = "$n" ]; then pass "git identity in ~/.gitconfig"; else fail "git identity" "$(git config --global user.name)"; fi
 fi
+# Global writes land in the per-machine ~/.gitconfig, not in the linked shared config.
+git config --global dotfiles.verify yes
+if grep -q 'verify = yes' "$HOME/.gitconfig" && ! grep -q 'verify' "$repo/home/git/.config/git/config"; then
+  pass "git config --global writes to ~/.gitconfig"
+else
+  fail "git config --global writes to ~/.gitconfig"
+fi
+git config --global --unset dotfiles.verify
 
 # No installer wrote through the rc symlinks into the repo.
 dirty=$(git -C "$repo" status --porcelain -- home)
