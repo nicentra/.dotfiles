@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { normalizeAnswers, presetAnswers } from "../src/answers.ts";
 import { buildPlan, windowsSteps } from "../src/plan.ts";
 import { platformFromOsRelease } from "../src/platform.ts";
-import { FONT, hasFont, mergeTerminalSettings } from "../src/windows.ts";
+import { FONT, hasFont, mergeTerminalSettings, withoutWindowsPath } from "../src/windows.ts";
 import { fakeCtx, OS_RELEASE, platform, tmp } from "./helpers.ts";
 
 const wsl = platformFromOsRelease(OS_RELEASE.arch, "x64", true);
@@ -63,5 +63,26 @@ describe("Windows steps", () => {
   });
   test("nothing for a server", () => {
     expect(windowsSteps(presetAnswers("server"))).toEqual([]);
+  });
+});
+
+describe("wsl.conf", () => {
+  test("adds the key to an existing [interop] section", () => {
+    expect(withoutWindowsPath("[boot]\nsystemd=true\n\n[interop]\nenabled = true\n")).toBe(
+      "[boot]\nsystemd=true\n\n[interop]\nappendWindowsPath = false\nenabled = true\n",
+    );
+  });
+  test("adds the section when there's none", () => {
+    expect(withoutWindowsPath("[boot]\nsystemd=true\n")).toBe("[boot]\nsystemd=true\n\n[interop]\nappendWindowsPath = false\n");
+    expect(withoutWindowsPath("")).toBe("[interop]\nappendWindowsPath = false\n");
+  });
+  test("turns an existing setting off, once", () => {
+    const on = "[interop]\nappendWindowsPath = true\n";
+    expect(withoutWindowsPath(on)).toBe("[interop]\nappendWindowsPath = false\n");
+    expect(withoutWindowsPath(withoutWindowsPath(on))).toBe(withoutWindowsPath(on));
+  });
+  test("is off unless chosen", () => {
+    expect(windowsSteps(presetAnswers("workstation")).map((s) => s.id)).not.toContain("wsl-path");
+    expect(windowsSteps(normalizeAnswers({ windows: { trimPath: true } })).map((s) => s.id)).toContain("wsl-path");
   });
 });

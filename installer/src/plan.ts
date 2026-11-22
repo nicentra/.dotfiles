@@ -24,7 +24,7 @@ import {
   uvStep,
   uvToolsStep,
 } from "./steps.ts";
-import { windowsAppsStep, windowsClaudeStep, windowsFontStep, windowsGitStep, windowsTerminalStep } from "./windows.ts";
+import { trimWslPathStep, windowsAppsStep, windowsClaudeStep, windowsFontStep, windowsGitStep, windowsTerminalStep } from "./windows.ts";
 
 export interface Plan {
   steps: Step[];
@@ -146,5 +146,6 @@ export function windowsSteps(a: Answers): Step[] {
   if (w.terminal) steps.push(windowsTerminalStep());
   if (w.git) steps.push(windowsGitStep());
   if (w.claude && a.agents.harnesses.includes("claude")) steps.push(windowsClaudeStep());
+  if (w.trimPath) steps.push(trimWslPathStep());
   return steps;
 }

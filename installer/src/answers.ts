@@ -80,6 +80,11 @@ export interface Answers {
     git: boolean;
     /** The git-workflow skill and Claude Code settings on Windows (with Claude Code picked). */
     claude: boolean;
+    /**
+     * Stop WSL from appending Windows' PATH (appendWindowsPath = false), keeping
+     * code, cursor, explorer.exe and friends as links. Off unless chosen.
+     */
+    trimPath: boolean;
   };
 }
 
@@ -134,6 +139,7 @@ export function presetAnswers(preset: Preset): Answers {
       terminal: !server,
       git: !server,
       claude: !server,
+      trimPath: false,
     },
   };
 }

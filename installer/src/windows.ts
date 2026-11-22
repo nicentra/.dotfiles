@@ -1,6 +1,6 @@
 // The Windows side of a WSL machine, driven from inside WSL through interop:
 // winget apps, the Nerd Font, Windows Terminal, git config and Claude Code.
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { mergeClaudeSettings } from "./agents.ts";
 import { mergeDeep } from "./answers.ts";
@@ -213,6 +213,66 @@ export function windowsClaudeStep(): Step {
       const merged = mergeClaudeSettings(ctx.repo, settings);
       const after = read();
       return merged || before.some((b, i) => b !== after[i]) ? { status: "done" } : { status: "skipped", note: "up to date" };
+    },
+  };
+}
+
+/** Windows commands worth keeping in WSL once Windows' PATH is gone, as links in ~/.local/bin. */
+export const WINDOWS_COMMANDS = ["code", "cursor", "explorer.exe", "clip.exe", "cmd.exe", "powershell.exe", "wt.exe", "winget.exe"];
+
+/** /etc/wsl.conf with [interop] appendWindowsPath = false, keeping everything else. */
+export function withoutWindowsPath(conf: string): string {
+  const lines = conf.split("\n");
+  let section = "";
+  let interop = -1;
+  for (const [i, line] of lines.entries()) {
+    const header = line.match(/^\s*\[([^\]]+)\]/);
+    if (header) {
+      section = header[1]?.trim().toLowerCase() ?? "";
+      if (section === "interop") interop = i;
+      continue;
+    }
+    if (section === "interop" && /^\s*appendWindowsPath\s*=/i.test(line)) {
+      lines[i] = "appendWindowsPath = false";
+      return lines.join("\n");
+    }
+  }
+  if (interop >= 0) lines.splice(interop + 1, 0, "appendWindowsPath = false");
+  else {
+    while (lines.length && lines.at(-1)?.trim() === "") lines.pop();
+    lines.push(...(lines.length ? [""] : []), "[interop]", "appendWindowsPath = false");
+  }
+  const out = lines.join("\n");
+  return out.endsWith("\n") ? out : `${out}\n`;
+}
+
+export function trimWslPathStep(): Step {
+  return {
+    id: "wsl-path",
+    title: "Drop Windows' PATH from WSL",
+    detail: ["[interop] appendWindowsPath = false in /etc/wsl.conf", `links in ~/.local/bin: ${WINDOWS_COMMANDS.join(", ")}`],
+    async run(ctx) {
+      const bin = join(ctx.home, ".local", "bin");
+      const linked: string[] = [];
+      // Link while Windows' PATH is still there to find them; later runs find the links.
+      for (const name of WINDOWS_COMMANDS) {
+        const found = ctx.sh.which(name);
+        if (!found || found.startsWith(`${bin}/`)) continue;
+        mkdirSync(bin, { recursive: true });
+        rmSync(join(bin, name), { force: true });
+        symlinkSync(found, join(bin, name));
+        linked.push(name);
+      }
+      const conf = existsSync("/etc/wsl.conf") ? readFileSync("/etc/wsl.conf", "utf8") : "";
+      const wanted = withoutWindowsPath(conf);
+      const confChanged = wanted !== conf;
+      if (confChanged) await ctx.sh.run(["tee", "/etc/wsl.conf"], { root: true, stdin: wanted });
+      if (!confChanged && !linked.length) return { status: "skipped", note: "already off" };
+      const notes = [
+        ...(linked.length ? [`linked ${linked.join(", ")}`] : []),
+        ...(confChanged ? ["takes effect after wsl --shutdown"] : []),
+      ];
+      return { status: "done", note: notes.join("; ") };
     },
   };
 }
