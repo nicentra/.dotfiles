@@ -385,6 +385,21 @@ export function loginShellStep(): Step {
   };
 }
 
+export function neovimPluginsStep(): Step {
+  return {
+    id: "neovim-plugins",
+    title: "neovim plugins",
+    detail: ['nvim --headless "+Lazy! sync" +qa'],
+    async run(ctx) {
+      const data = join(process.env.XDG_DATA_HOME || join(ctx.home, ".local", "share"), "nvim");
+      // lazy writes its lockfile after the first sync; later additions install on the next start.
+      if (existsSync(join(data, "lazy-lock.json"))) return { status: "skipped", note: "already installed" };
+      await ctx.sh.run(["nvim", "--headless", "+Lazy! sync", "+qa"]);
+      return { status: "done" };
+    },
+  };
+}
+
 /** The git-wt post-create command that installs the dev dependencies (and with them the hooks) in new worktrees of this repo. */
 export const WORKTREE_SETUP = "cd installer && bun install --frozen-lockfile --silent";
 

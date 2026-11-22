@@ -92,10 +92,18 @@ export const TOOLS: Tool[] = [
     bin: "fd",
     methods: native("fd", "fd-find", { aptLinks: { fd: "fdfind" } }),
   },
+  {
+    id: "shellcheck",
+    name: "ShellCheck",
+    group: "core",
+    description: "Shell script linter (this repo's hooks use it)",
+    bin: "shellcheck",
+    methods: native("shellcheck"),
+  },
   { id: "chafa", name: "chafa", group: "core", description: "Images in the terminal", bin: "chafa", methods: native("chafa") },
 
   // git
-  { id: "gh", name: "GitHub CLI", group: "git", description: "gh", bin: "gh", methods: native("github-cli", "gh") },
+  { id: "gh", name: "GitHub CLI", group: "git", description: "GitHub from the terminal", bin: "gh", methods: native("github-cli", "gh") },
   {
     id: "delta",
     name: "delta",

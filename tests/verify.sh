@@ -31,6 +31,10 @@ if want '.editors.neovim // true' && [ "$(jq -r '.preset' "$answers")" != server
   case $v in "NVIM v0."[1-9][0-9]*) pass "neovim >= 0.10 ($v)" ;; *) fail "neovim >= 0.10" "$v" ;; esac
 fi
 
+if want '.editors.neovim'; then
+  if [ -f "$HOME/.local/share/nvim/lazy-lock.json" ]; then pass "neovim plugins installed"; else fail "neovim plugins installed"; fi
+fi
+
 if want '.node.enabled'; then
   v=$(in_zsh 'node --version') && pass "node $v (via $(in_zsh 'command -v node'))" || fail "node" "$v"
   case $(in_zsh 'command -v node') in */pnpm/*) ;; *) fail "node comes from pnpm" ;; esac

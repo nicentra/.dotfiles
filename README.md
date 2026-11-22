@@ -10,26 +10,38 @@ the [`legacy-x11`](https://github.com/nicentra/.dotfiles/tree/legacy-x11) tag.
 ## Install
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/nicentra/.dotfiles/main/bootstrap.sh)" - --preset workstation
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/nicentra/.dotfiles/main/bootstrap.sh)"
 ```
 
 `bootstrap.sh` installs git, curl and unzip. It unzips a pinned
 [bun](https://bun.sh) into `~/.local/share/dotfiles/bun` without touching
 shell rc files, clones this repo to `~/Projects/.dotfiles` and starts the
-installer. Pass installer options after the `-`. From a clone,
-`./bootstrap.sh --preset workstation` does the same.
+installer. That asks what to set up, one screen at a time:
+- **Preset:** workstation or server.
+- **Shell:** zsh, oh-my-zsh, starship, login shell.
+- **Git and GitHub:** git identity, GitHub login, SSH and GPG keys.
+- **Editors.**
+- **CLI tools:** each shows how it would be installed here.
+- **Runtimes:** the Node and Python versions and global packages, and bun.
+- **paru** on Arch.
 
-Until the TUI exists ([roadmap](#roadmap)), the answers come from a preset
-(`workstation` or `server`) or from a file (`--answers answers.json`, see
-[`tests/answers/`](tests/answers/)). Anything missing is filled in from the
-preset.
+The last screen lists every step and asks before it installs anything.
+
+Without a terminal, pass the answers instead: `--preset workstation`,
+`--preset server`, or `--answers answers.json` (see
+[`tests/answers/`](tests/answers/)), after a `-`:
+
+```sh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/nicentra/.dotfiles/main/bootstrap.sh)" - --preset server
+```
 
 Afterwards, the `dotfiles` command reruns the installer:
 
 ```sh
-dotfiles              # pull the repo, then reapply the saved answers
-dotfiles --dry-run    # show the steps without running them
-dotfiles --no-pull    # skip the git pull
+dotfiles                 # pull the repo, then reapply the saved answers
+dotfiles --reconfigure   # ask again, starting from the saved answers
+dotfiles --dry-run       # show the steps without running them
+dotfiles --no-pull       # skip the git pull
 ```
 
 On a workstation the installer also sets up GitHub. It logs in with
@@ -50,6 +62,7 @@ bootstrap.sh          fetch git and bun, clone, start the installer
 installer/            TypeScript on bun
   src/manifest.ts     every tool, with install methods per platform
   src/plan.ts         answers + platform → steps
+  src/ui/             the TUI (Ink)
 home/<package>/       GNU stow packages, one per component (see home/README.md)
 copy/<package>/       configs that programs rewrite: copied once, not linked
 tests/                container tests: stow smoke test, full install per distro
@@ -99,7 +112,7 @@ twice, and the second run must change nothing.
 1. ~~Reset this repo and import the current configs as stow packages.~~
 2. ~~Installer engine and manifest, headless, tested in Docker.~~
 3. ~~GitHub CLI login, SSH and GPG keys.~~
-4. The TUI on top of the engine.
+4. ~~The TUI on top of the engine.~~
 5. Agents: harnesses (opt-in), instructions, settings, skills.
 6. ~~A neovim config.~~
 7. Windows.

@@ -11,6 +11,7 @@ import {
   installedVersionOk,
   linkStep,
   loginShellStep,
+  neovimPluginsStep,
   nodeStep,
   ohMyZshStep,
   paruStep,
@@ -107,6 +108,7 @@ export async function buildPlan(ctx: Ctx): Promise<Plan> {
     if (a.bun.globals.length) steps.push(bunGlobalsStep(a.bun.globals));
   }
 
+  if (a.editors.neovim) steps.push(neovimPluginsStep());
   if (a.shell.zsh && a.shell.loginShell && ctx.platform.os === "linux") steps.push(loginShellStep());
   if (a.extras.paru && ctx.platform.family === "arch") steps.push(paruStep());
   steps.push(repoDevSetupStep());

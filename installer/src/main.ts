@@ -11,6 +11,8 @@ import { buildPlan } from "./plan.ts";
 import { detectPlatform } from "./platform.ts";
 import { bold, consoleReporter, dim, green, red, runSteps, yellow } from "./runner.ts";
 import { detectRootPrefix, Log, Shell } from "./shell.ts";
+import { askAnswers } from "./ui/ask.tsx";
+import { nodeVersions, toolChoices } from "./ui/choices.ts";
 
 const HELP = `Usage: dotfiles [options]
 
@@ -24,6 +26,14 @@ or asks what to set up when there are none.
   -n, --dry-run       Show the steps without running them
   -h, --help          Show this help
 `;
+
+/** Start from the identity git already has, so the TUI suggests it. */
+async function withGitIdentity(sh: Shell, a: Answers): Promise<Answers> {
+  const get = async (key: string) =>
+    (await sh.run(["git", "config", "--get", key], { allowFail: true }).catch(() => undefined))?.stdout.trim() ?? "";
+  const [name, email, signingKey] = await Promise.all([get("user.name"), get("user.email"), get("user.signingkey")]);
+  return { ...a, git: { name, email, signingKey } };
+}
 
 async function main(argv: string[]): Promise<number> {
   const { values: opts } = parseArgs({
@@ -51,15 +61,16 @@ async function main(argv: string[]): Promise<number> {
   const sh = new Shell(log, detectRootPrefix());
 
   const saved = answersPath(home);
+  const savedAnswers = loadAnswers(saved);
   let answers: Answers | undefined;
   if (opts.answers) answers = loadAnswers(resolve(opts.answers));
   else if (opts.preset) {
     if (!["workstation", "server"].includes(opts.preset)) throw new Error(`Unknown preset "${opts.preset}" (workstation, server)`);
     answers = presetAnswers(opts.preset as Preset);
-  } else if (!opts.reconfigure) answers = loadAnswers(saved);
-  if (!answers) {
-    // The TUI comes in the next phase; until then answers have to come from a file or preset.
-    process.stderr.write(`No saved answers. Pass --preset workstation, --preset server or --answers <file>.\n\n${HELP}`);
+  } else if (!opts.reconfigure) answers = savedAnswers;
+  const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !opts.yes;
+  if (!answers && !interactive) {
+    process.stderr.write(`No answers to apply, and no terminal to ask in. Pass --preset or --answers <file>.\n\n${HELP}`);
     return 2;
   }
 
@@ -68,6 +79,7 @@ async function main(argv: string[]): Promise<number> {
     throw new Error("Installing packages needs root, and neither sudo nor doas is installed. Install sudo (as root) and rerun.");
   }
 
+  // apt's versions decide between apt and GitHub releases, also for the TUI's tool list.
   if (!opts["dry-run"] && platform.family === "debian") {
     process.stdout.write(dim("Refreshing the apt package index …\n"));
     await sh.run(["apt-get", "update"], { root: true, env: { DEBIAN_FRONTEND: "noninteractive" } });
@@ -86,8 +98,28 @@ async function main(argv: string[]): Promise<number> {
       return out?.stdout.includes("install ok installed") ?? false;
     },
   };
-  const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !opts.yes;
-  const ctx: Ctx = { platform, answers, home, repo, user: userInfo().username, sh, probe, backup: new Backup(home, stamp), interactive };
+  const base = { platform, home, repo, user: userInfo().username, sh, probe, backup: new Backup(home, stamp), interactive };
+
+  if (!answers) {
+    process.stdout.write(dim("Looking at what's installed …\n"));
+    const initial = savedAnswers ?? (await withGitIdentity(sh, presetAnswers("workstation")));
+    const draft: Ctx = { ...base, answers: initial };
+    const [tools, node] = await Promise.all([toolChoices(draft), nodeVersions()]);
+    answers = await askAnswers({
+      platform,
+      initial,
+      saved: savedAnswers,
+      tools,
+      node,
+      preview: (a) => buildPlan({ ...base, answers: a }),
+    });
+    if (!answers) {
+      process.stdout.write("Cancelled, nothing changed.\n");
+      return 0;
+    }
+  }
+
+  const ctx: Ctx = { ...base, answers };
   const plan = await buildPlan(ctx);
 
   if (opts["dry-run"]) {

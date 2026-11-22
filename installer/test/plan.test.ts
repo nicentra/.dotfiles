@@ -21,6 +21,7 @@ describe("plan", () => {
       "python",
       "uv-tools",
       "bun",
+      "neovim-plugins",
       "login-shell",
       "paru",
       "repo-dev-setup",
