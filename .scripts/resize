@@ -1,8 +1,0 @@
-#!/bin/zsh
-
-case $1 in
-    +|-)
-        var=$(bspc query -T -n | jq -r .presel.splitRatio)
-        var=$((var < 0.9 ? var $1 0.1 : var))
-        bspc node -o "$var"
-esac
