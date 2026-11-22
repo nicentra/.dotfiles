@@ -1,7 +1,7 @@
 // Tool installers love appending PATH lines to shell rc files. This repo owns
 // those files (they're symlinks into it), so every installer runs inside a
 // guard that puts them back exactly as they were.
-import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync, rmSync, type Stats, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const RC_FILES = [
@@ -16,13 +16,10 @@ export const RC_FILES = [
   ".config/fish/config.fish",
 ];
 
-type Snapshot =
-  | { kind: "missing" }
-  | { kind: "file"; content: string }
-  | { kind: "link"; target: string; content: string | undefined };
+type Snapshot = { kind: "missing" } | { kind: "file"; content: string } | { kind: "link"; target: string; content: string | undefined };
 
 function snap(path: string): Snapshot {
-  let st;
+  let st: Stats;
   try {
     st = lstatSync(path);
   } catch {

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { Answers } from "./answers.ts";
-import { Backup } from "./files.ts";
+import type { Backup } from "./files.ts";
 import type { Probe } from "./manifest.ts";
 import type { Platform } from "./platform.ts";
 import type { Shell } from "./shell.ts";

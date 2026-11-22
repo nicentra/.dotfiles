@@ -2,10 +2,10 @@
 // already in place, so a rerun only does what changed.
 import { appendFileSync, copyFileSync, cpSync, existsSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Ctx, type Step, bunHome, localBin, localOpt, pnpmHome } from "./context.ts";
+import { bunHome, type Ctx, localBin, localOpt, pnpmHome, type Step } from "./context.ts";
 import { download, ensureDir, extract, fetchText, latestGithubTag, makeExecutable, occupied, withTempDir } from "./files.ts";
 import { allLinked, copyPackages, linkPackages, removeLegacyLinks } from "./link.ts";
-import { type Method, type Tool, describeMethod, parseVersion } from "./manifest.ts";
+import { describeMethod, type Method, parseVersion, type Tool } from "./manifest.ts";
 import { compareVersions } from "./platform.ts";
 
 type Native = Extract<Method, { kind: "pacman" | "apt" }>;
@@ -127,7 +127,7 @@ export function ohMyZshStep(plugins: string[]): Step {
       const todo: [string, string][] = [];
       if (!existsSync(omz)) todo.push(["ohmyzsh/ohmyzsh", omz]);
       for (const p of plugins) {
-        const dir = join(omz, "custom", "plugins", p.split("/")[1]!);
+        const dir = join(omz, "custom", "plugins", p.split("/").at(-1) ?? p);
         if (!existsSync(dir)) todo.push([p, dir]);
       }
       if (!todo.length) return { status: "skipped", note: "already installed" };
@@ -322,7 +322,10 @@ export function uvToolsStep(tools: string[]): Step {
     detail: [tools.join(" ")],
     async run(ctx) {
       const listed = await ctx.sh.capture(["uv", "tool", "list"]).catch(() => "");
-      const have = listed.split("\n").filter((l) => l && !l.startsWith("-")).map((l) => l.split(" ")[0]);
+      const have = listed
+        .split("\n")
+        .filter((l) => l && !l.startsWith("-"))
+        .map((l) => l.split(" ")[0]);
       const missing = tools.filter((t) => !have.includes(t));
       if (!missing.length) return { status: "skipped", note: "already installed" };
       for (const t of missing) await ctx.sh.run(["uv", "tool", "install", t]);
@@ -378,6 +381,24 @@ export function loginShellStep(): Step {
       if (!shells.includes(zsh)) await ctx.sh.run(["sh", "-c", `echo '${zsh}' >> /etc/shells`], { root: true });
       await ctx.sh.run(["usermod", "-s", zsh, ctx.user], { root: true });
       return { status: "done", note: zsh };
+    },
+  };
+}
+
+/** The git-wt post-create command that installs the dev dependencies (and with them the hooks) in new worktrees of this repo. */
+export const WORKTREE_SETUP = "cd installer && bun install --frozen-lockfile --silent";
+
+export function repoDevSetupStep(): Step {
+  return {
+    id: "repo-dev-setup",
+    title: "Hooks in new worktrees of this repo",
+    detail: [`git config wt.postCreate "${WORKTREE_SETUP}"`],
+    async run(ctx) {
+      if (!existsSync(join(ctx.repo, ".git"))) return { status: "skipped", note: "not a git checkout" };
+      const current = await ctx.sh.run(["git", "-C", ctx.repo, "config", "--get-all", "wt.postCreate"], { allowFail: true });
+      if (current.stdout.split("\n").includes(WORKTREE_SETUP)) return { status: "skipped", note: "already set" };
+      await ctx.sh.run(["git", "-C", ctx.repo, "config", "--add", "wt.postCreate", WORKTREE_SETUP]);
+      return { status: "done" };
     },
   };
 }

@@ -67,13 +67,24 @@ tests/                container tests: stow smoke test, full install per distro
 ## Development
 
 ```sh
-cd installer && bun install && bun test && bun run typecheck
+cd installer && bun install        # also installs the git hooks (husky)
+bun run lint                       # everything the hooks and CI check
 docker run --rm -v "$PWD:/src:ro" ubuntu:24.04 sh /src/tests/install-e2e.sh workstation
 ```
 
-CI runs the unit tests, the stow smoke test, and a full install from
-`bootstrap.sh` on every target distro. Each install runs twice, and the
-second run must change nothing.
+Before every commit, [`tests/lint.sh`](tests/lint.sh) checks the staged
+files:
+- biome formats and lints TypeScript and JSON, and restages its fixes.
+- The installer's typecheck and tests run when it changed.
+- shellcheck checks sh and bash scripts, and `zsh -n` checks zsh files.
+- gitleaks scans the staged changes for secrets.
+
+The commit-msg hook requires a Conventional Commit header. The installer
+sets `wt.postCreate` so that new `git wt` worktrees get the hooks too.
+
+CI runs the same lint on every file, the stow smoke test, and a full
+install from `bootstrap.sh` on every target distro. Each install runs
+twice, and the second run must change nothing.
 
 ## Roadmap
 

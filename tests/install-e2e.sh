@@ -43,6 +43,7 @@ as_tester "sh ~/Projects/.dotfiles/tests/verify.sh"
 echo "::endgroup::"
 
 echo "::group::second run"
+# shellcheck disable=SC2088 # the tilde is for tester's shell
 out=$(as_tester '~/.local/bin/dotfiles --no-pull' 2>&1) || { echo "$out"; exit 1; }
 echo "$out"
 echo "::endgroup::"
