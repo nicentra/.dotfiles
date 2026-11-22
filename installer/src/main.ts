@@ -86,7 +86,8 @@ async function main(argv: string[]): Promise<number> {
       return out?.stdout.includes("install ok installed") ?? false;
     },
   };
-  const ctx: Ctx = { platform, answers, home, repo, user: userInfo().username, sh, probe, backup: new Backup(home, stamp) };
+  const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !opts.yes;
+  const ctx: Ctx = { platform, answers, home, repo, user: userInfo().username, sh, probe, backup: new Backup(home, stamp), interactive };
   const plan = await buildPlan(ctx);
 
   if (opts["dry-run"]) {
@@ -102,6 +103,8 @@ async function main(argv: string[]): Promise<number> {
   for (const n of plan.notes) process.stdout.write(`${yellow("note")} ${n}\n`);
 
   const summary = await runSteps(ctx, plan.steps, consoleReporter());
+  // GitHub login and the GPG step can fill in the identity and signing key.
+  if (!opts.answers || resolve(opts.answers) !== saved) saveAnswers(saved, ctx.answers);
 
   const parts = [
     green(`${summary.done.length} done`),
