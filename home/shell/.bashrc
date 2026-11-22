@@ -2,7 +2,7 @@
 # ~/.bashrc
 #
 
-# PATH first, so non-interactive bash (scripts, ssh commands) gets it too.
+# PATH first, so commands run over ssh (bash reads .bashrc for those) get it too.
 [[ -r ~/.config/shell/env.sh ]] && . ~/.config/shell/env.sh
 
 # If not running interactively, don't do anything
