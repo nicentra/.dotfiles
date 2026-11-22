@@ -202,6 +202,7 @@ export function gpgKeyStep(): Step {
       const list = async () =>
         parseGpgSecretKeys((await ctx.sh.run(["gpg", "--list-secret-keys", "--with-colons"], { allowFail: true })).stdout);
       const done: string[] = [];
+      let hint = "";
       let key = pickSigningKey(await list(), git.email, git.signingKey);
       if (!key) {
         process.stdout.write(`Creating a GPG signing key for ${git.name} <${git.email}>. Pick a passphrase when asked.\n`);
@@ -230,7 +231,7 @@ export function gpgKeyStep(): Step {
         done.push("commits and tags signed");
       }
       if (!(await canUse(ctx, "write:gpg_key"))) {
-        done.push("not added to GitHub: gh needs the write:gpg_key scope (rerun dotfiles with GitHub login on)");
+        hint = "not on GitHub yet: gh needs the write:gpg_key scope (rerun dotfiles with GitHub login on)";
       } else {
         const onGithub = JSON.parse(await ctx.sh.capture(["gh", "api", "user/gpg_keys"])) as { key_id: string }[];
         if (!onGithub.some((k) => k.key_id.toUpperCase() === key.keyId.toUpperCase())) {
@@ -243,7 +244,8 @@ export function gpgKeyStep(): Step {
           done.push("added to GitHub");
         }
       }
-      return done.length ? { status: "done", note: done.join(", ") } : { status: "skipped", note: `signing with ${key.keyId}` };
+      const note = [...done, hint].filter(Boolean).join("; ");
+      return done.length ? { status: "done", note } : { status: "skipped", note: note || `signing with ${key.keyId}` };
     },
   };
 }
