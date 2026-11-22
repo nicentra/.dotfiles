@@ -80,7 +80,7 @@ for a in ps pr; do
 done
 
 # git reads the shared config from ~/.config/git/config.
-if [ "$(git config --global init.defaultBranch)" = main ] && [ -L "$HOME/.config/git/config" ]; then
+if [ "$(cd / && git config init.defaultBranch)" = main ] && [ -L "$HOME/.config/git/config" ]; then
   pass "git config"
 else
   fail "git config"

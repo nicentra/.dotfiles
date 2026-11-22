@@ -57,7 +57,8 @@ if [ -z "$out" ]; then pass "zsh starts cleanly"; else fail "zsh starts cleanly"
 p=$(zsh -c 'echo $PATH')
 case $p in "$HOME/.local/bin:"*) pass "PATH starts with ~/.local/bin" ;; *) fail "PATH starts with ~/.local/bin" "$p" ;; esac
 
-if [ "$(git config --global init.defaultBranch)" = main ]; then pass "git reads the shared config"; else fail "git reads the shared config"; fi
+# Not --global: once ~/.gitconfig exists, --global reads only that file; git itself reads both.
+if [ "$(cd / && git config init.defaultBranch)" = main ]; then pass "git reads the shared config"; else fail "git reads the shared config"; fi
 n=$(jq -r '.git.name // ""' "$answers")
 if [ -n "$n" ]; then
   if [ "$(git config --global user.name)" = "$n" ]; then pass "git identity in ~/.gitconfig"; else fail "git identity" "$(git config --global user.name)"; fi
